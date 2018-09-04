@@ -1,2 +1,2 @@
-model_checkpoint_path: "model-g-d2.ckpt"
-all_model_checkpoint_paths: "model-g-d2.ckpt"
+model_checkpoint_path: "model-pg.ckpt"
+all_model_checkpoint_paths: "model-pg.ckpt"
