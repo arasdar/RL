@@ -106,6 +106,7 @@ class Agent():
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        # ---------------------------- Adverserial training ---------------------------- #
         # ---------------------------- update actor ---------------------------- #
         actor_loss = F.mse_loss(gQ_expected, Q_targets) # max
         # Minimize the loss
