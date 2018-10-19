@@ -98,11 +98,11 @@ class Agent():
         # ---------------------------- update critic ---------------------------- #
         # Compute critic loss
         Q_expected = self.critic_local(states, actions)
-        critic_loss = F.mse_loss(Q_expected, Q_targets)
-        critic_loss += F.mse_loss(Q_expected, rewards)
+        critic_loss = F.mse_loss(Q_expected, Q_targets) # max
+        critic_loss += F.mse_loss(Q_expected, rewards) # min
         # Minimize the loss
         self.critic_optimizer.zero_grad()
-        critic_loss.backward()
+        critic_loss.backward(retain_graph=True)
         self.critic_optimizer.step()
 
         # ---------------------------- update actor ---------------------------- #
@@ -110,10 +110,11 @@ class Agent():
         actions_pred = self.actor_local(states)
         #actor_loss = -self.critic_local(states, actions_pred).mean()
         Q_expected = self.critic_local(states, actions_pred)
-        actor_loss = F.mse_loss(Q_expected, Q_targets)
+        actor_loss = F.mse_loss(Q_expected, Q_targets) # max
+        #actor_loss = torch.mean((Q_expected - Q_targets)**2)    
         # Minimize the loss
         self.actor_optimizer.zero_grad()
-        actor_loss.backward()
+        actor_loss.backward(retain_graph=True)
         self.actor_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
