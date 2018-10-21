@@ -99,7 +99,7 @@ class Agent():
         # Compute critic loss
         Q_expected = self.critic_local(states, actions)
         critic_loss = F.mse_loss(Q_expected, Q_targets) # max
-        critic_loss += F.mse_loss(Q_expected, rewards) # min
+        #critic_loss += F.mse_loss(Q_expected, rewards) # min
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward(retain_graph=True)
