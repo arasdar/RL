@@ -14,8 +14,7 @@ BATCH_SIZE = 128        # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor 
-#LR_CRITIC = 3e-4        # learning rate of the critic  --> Bipedal
-LR_CRITIC = 1e-4        # learning rate of the critic --> Mine
+LR_CRITIC = 2e-4        # learning rate of the critic
 WEIGHT_DECAY = 0.0001   # L2 weight decay
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -98,11 +97,11 @@ class Agent():
         # ---------------------------- update critic ---------------------------- #
         # Compute critic loss
         Q_expected = self.critic_local(states, actions)
-        critic_loss = F.mse_loss(Q_expected, Q_targets) # max
-        #critic_loss += F.mse_loss(Q_expected, rewards) # min
+        #critic_loss = F.mse_loss(Q_expected, Q_targets)
+        critic_loss = torch.mean((Q_expected - Q_targets)**2)
         # Minimize the loss
         self.critic_optimizer.zero_grad()
-        critic_loss.backward(retain_graph=True)
+        critic_loss.backward()
         self.critic_optimizer.step()
 
         # ---------------------------- update actor ---------------------------- #
@@ -110,11 +109,10 @@ class Agent():
         actions_pred = self.actor_local(states)
         #actor_loss = -self.critic_local(states, actions_pred).mean()
         Q_expected = self.critic_local(states, actions_pred)
-        actor_loss = F.mse_loss(Q_expected, Q_targets) # max
-        #actor_loss = torch.mean((Q_expected - Q_targets)**2)    
+        actor_loss = -torch.mean(Q_expected)    
         # Minimize the loss
         self.actor_optimizer.zero_grad()
-        actor_loss.backward(retain_graph=True)
+        actor_loss.backward()
         self.actor_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
