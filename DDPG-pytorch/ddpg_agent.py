@@ -56,6 +56,7 @@ class Agent():
         # Save experience / reward
         self.memory.add(state, action, reward, next_state, done)
 
+    def step_learn(self):
         # Learn, if enough samples are available in memory
         if len(self.memory) > BATCH_SIZE:
             experiences = self.memory.sample()
