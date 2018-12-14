@@ -1,2 +1,0 @@
-model_checkpoint_path: "model-nav-pixel.ckpt"
-all_model_checkpoint_paths: "model-nav-pixel.ckpt"
