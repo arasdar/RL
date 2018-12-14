@@ -90,33 +90,29 @@ class Agent():
         states, actions, rewards, next_states, dones = experiences
 
         # Get predicted next-state actions and Q values from target models
-        next_actions = self.actor_target(next_states)
-        nextQs = self.critic_target(next_states, next_actions)
-        targetQs = rewards + (gamma * nextQs * (1 - dones))
-        dQs = self.critic_local(states, actions)
-        pred_actions = self.actor_local(states)
-        gQs = self.critic_local(states, pred_actions)
-        critic_loss = F.mse_loss(dQs, targetQs) # max 
-        actor_loss = F.mse_loss(actions, pred_actions)
-        critic_loss += F.mse_loss(gQs, rewards) # min
-        actor_loss += F.mse_loss(gQs, targetQs) # max
-        critic_loss += gQs.mean() # minimize Q
-        actor_loss += -gQs.mean() # maximize Q
-        critic_loss += targetQs.mean() # minimize Q
-        actor_loss += -targetQs.mean() # maximize Q
+        actions_next = self.actor_target(next_states)
+        Q_targets_next = self.critic_target(next_states, actions_next)
+        Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
         
-        # RuntimeError: Trying to backward through the graph a second time, but the buffers have already been freed. 
-        # Specify retain_graph=True when calling backward the first time.
-    
-        # Minimize the loss
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward(retain_graph=True)
-        self.critic_optimizer.step()
+        # ---------------------------- update critic ---------------------------- #
+        # Compute critic loss
+        Q_expected = self.critic_local(states, actions)
+        critic_loss = F.mse_loss(Q_expected, Q_targets)
+
+        # ---------------------------- update actor ---------------------------- #
+        # Compute actor loss
+        actions_pred = self.actor_local(states)
+        critic_loss += self.critic_local(states, actions_pred).mean() # min
+        actor_loss = -self.critic_local(states, actions_pred).mean() # max
         
-        # Minimize the loss
+        # Minimize the losses
         self.actor_optimizer.zero_grad()
-        actor_loss.backward(retain_graph=True)
+        actor_loss.backward()
         self.actor_optimizer.step()
+        ###############################
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
+        self.critic_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
         self.soft_update(self.critic_local, self.critic_target, TAU)
