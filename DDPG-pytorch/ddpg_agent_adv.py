@@ -55,7 +55,7 @@ class Agent():
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
         self.memory.add(state, action, reward, next_state, done)
-        #     def step_learn(self):
+        
         # Learn, if enough samples are available in memory
         if len(self.memory) > BATCH_SIZE:
             experiences = self.memory.sample()
@@ -92,30 +92,30 @@ class Agent():
         # Get predicted next-state actions and Q values from target models
         actions_next = self.actor_target(next_states)
         Q_targets_next = self.critic_target(next_states, actions_next)
-        Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+        # Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+        Q_targets = (gamma * Q_targets_next * (1 - dones))
         
         # ---------------------------- update critic ---------------------------- #
         # Compute critic loss
         Q_expected = self.critic_local(states, actions)
         critic_loss = F.mse_loss(Q_expected, Q_targets)
+        
+        actions_pred = self.actor_target(states)
+        critic_loss += self.critic_local(states, actions_pred).mean() # mingQ
+        
+        # Minimize the loss
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
+        self.critic_optimizer.step()
 
         # ---------------------------- update actor ---------------------------- #
         # Compute actor loss
         actions_pred = self.actor_local(states)
-        critic_loss += self.critic_local(states, actions_pred).mean() # minimize Q
-        actor_loss = -self.critic_local(states, actions_pred).mean() # maximize Q
-        
-# RuntimeError: Trying to backward through the graph a second time, but the buffers have already been freed. 
-# Specify retain_graph=True when calling backward the first time.
-    
-        # Minimize the loss
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward(retain_graph=True)
-        self.critic_optimizer.step()
+        actor_loss = -self.critic_target(states, actions_pred).mean() # maxgQ
         
         # Minimize the loss
         self.actor_optimizer.zero_grad()
-        actor_loss.backward(retain_graph=True)
+        actor_loss.backward()
         self.actor_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
