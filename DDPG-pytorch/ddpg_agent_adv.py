@@ -100,8 +100,8 @@ class Agent():
         Q_expected = self.critic_local(states, actions)
         critic_loss = F.mse_loss(Q_expected, Q_targets)
         
-        actions_pred = self.actor_target(states)
-        critic_loss += self.critic_local(states, actions_pred).mean() # mingQ
+#         actions_pred = self.actor_target(states)
+#         critic_loss += self.critic_local(states, actions_pred).mean() # mingQ
         
         # Minimize the loss
         self.critic_optimizer.zero_grad()
