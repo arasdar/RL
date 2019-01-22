@@ -55,8 +55,7 @@ class Agent():
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
         self.memory.add(state, action, reward, next_state, done)
-
-    def step_learn(self):
+        
         # Learn, if enough samples are available in memory
         if len(self.memory) > BATCH_SIZE:
             experiences = self.memory.sample()
@@ -93,7 +92,7 @@ class Agent():
         # Get predicted next-state actions and Q values from target models
         actions_next = self.actor_target(next_states)
         Q_targets_next = self.critic_target(next_states, actions_next)
-        Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+        Q_targets = (gamma * Q_targets_next * (1 - dones))
         
         # ---------------------------- update critic ---------------------------- #
         # Compute critic loss

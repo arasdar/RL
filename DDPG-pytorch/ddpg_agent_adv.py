@@ -92,16 +92,9 @@ class Agent():
         # Get predicted next-state actions and Q values from target models
         actions_next = self.actor_target(next_states)
         Q_targets_next = self.critic_target(next_states, actions_next)
-        # Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
         Q_targets = (gamma * Q_targets_next * (1 - dones))
-        
-        # ---------------------------- update critic ---------------------------- #
-        # Compute critic loss
         Q_expected = self.critic_local(states, actions)
         critic_loss = F.mse_loss(Q_expected, Q_targets)
-        
-#         actions_pred = self.actor_target(states)
-#         critic_loss += self.critic_local(states, actions_pred).mean() # mingQ
         
         # Minimize the loss
         self.critic_optimizer.zero_grad()
@@ -110,8 +103,15 @@ class Agent():
 
         # ---------------------------- update actor ---------------------------- #
         # Compute actor loss
-        actions_pred = self.actor_local(states)
-        actor_loss = -self.critic_target(states, actions_pred).mean() # maxgQ
+        actions_next = self.actor_local(next_states)
+        Q_targets_next = self.critic_local(next_states, actions_next)
+        Q_targets = (gamma * Q_targets_next * (1 - dones))
+        Q_expected = self.critic_target(states, actions)
+        actor_loss = F.mse_loss(Q_expected, Q_targets)
+#        actions_next = self.actor_local(next_states)
+#         actor_loss = -self.critic_local(next_states, actions_next).mean() # maxgQ
+#         actions_pred = self.actor_local(states)
+#         actor_loss = -self.critic_local(states, actions_pred).mean() # maxgQ
         
         # Minimize the loss
         self.actor_optimizer.zero_grad()
