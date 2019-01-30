@@ -14,7 +14,7 @@ BATCH_SIZE = 128        # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor 
-LR_CRITIC = 4e-4        # learning rate of the critic
+LR_CRITIC = 4e-3        # learning rate of the critic
 WEIGHT_DECAY = 1e-4     # L2 weight decay
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -89,12 +89,18 @@ class Agent():
         """
         states, actions, rewards, next_states, dones = experiences
 
+        # Get predicted next-state actions and Q values from target models
+        next_actions = self.actor_target(next_states)
+        nextQs = self.critic_local(next_states, next_actions)
+        gQs_target = (gamma * nextQs * (1 - dones))
+        
         # ---------------------------- update critic ---------------------------- #
         # Compute critic loss
-        actions_target = self.actor_target(states)
-        gQs_target = self.critic_target(states, actions_target)
+        #actions_target = self.actor_target(states)
+        #gQs_target = self.critic_local(states, actions_target)
         Qs_local = self.critic_local(states, actions)
-        critic_loss = F.mse_loss(Qs_local, gQs_target)
+        critic_loss = (gQs_target - Qs_local).mean()
+        #critic_loss = F.mse_loss(Qs_local, gQs_target)
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
