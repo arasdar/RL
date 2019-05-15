@@ -85,20 +85,21 @@ class Agent():
 
         Params
         ======
-            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
+            experiences (Tuple[torch.Tensor]): tuple of (S, A, r, S', dones) tuples 
             gamma (float): discount factor
         """
-        states, actions, rewards, next_states, dones = experiences
+        S, A, r, S_next, dones = experiences
 
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
-        actions_next = self.actor_target(next_states)
-        Q_targets_next = self.critic_target(next_states, actions_next)
+        A_next = self.actor_target(S_next)
+        Q_next = self.critic_target(S_next, A_next)
         # Compute Q targets for current states (y_i)
-        Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+        Q_target = r + (gamma * Q_next * (1 - dones))
         # Compute critic loss
-        Q_expected = self.critic_local(states, actions)
-        critic_loss = F.mse_loss(Q_expected, Q_targets)
+        Q = self.critic_local(S, A)
+        critic_loss = ((Q - Q_target)**2).mean()
+        #critic_loss = F.mse_loss(Q, Q_target)
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -107,8 +108,9 @@ class Agent():
 
         # ---------------------------- update actor ---------------------------- #
         # Compute actor loss
-        actions_pred = self.actor_local(states)
-        actor_loss = -self.critic_local(states, actions_pred).mean()
+        gA = self.actor_local(S)
+        gQ = self.critic_local(S, gA)
+        actor_loss = -((gQ - Q_target)**2).mean()
         # Minimize the loss
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
