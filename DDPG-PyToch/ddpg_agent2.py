@@ -3,12 +3,11 @@ import random
 import copy
 from collections import namedtuple, deque
 
-from model import Actor, Critic
+from model2 import Actor, Critic
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-
 
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
@@ -78,10 +77,10 @@ class Agent():
         
     def learn(self, experiences, gamma):
         """Update policy and value parameters using given batch of experience tuples.
-        Q_targets = r + γ * critic_target(next_state, actor_target(next_state))
+        Q_target = r + γ * critic_target(S_next, actor_target(S_next))
         where:
-            actor_target(state) -> action
-            critic_target(state, action) -> Q-value
+            actor_target(S) -> A
+            critic_target(S, A) -> Q-value
 
         Params
         ======
@@ -110,7 +109,7 @@ class Agent():
         # Compute actor loss
         gA = self.actor_local(S)
         gQ = self.critic_local(S, gA)
-        actor_loss = -((gQ - Q_target)**2).mean()
+        actor_loss = -gQ.mean()
         # Minimize the loss
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
