@@ -48,10 +48,10 @@ class Agent():
         # Replay memory
         self.memory = ReplayBuffer(A_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
     
-    def step(self, S, A, r, S2, done):
+    def step(self, s, a, reward, s2, done):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
-        self.memory.add(S, A, r, S2, done)
+        self.memory.add(s, a, reward, s2, done)
 
     def act(self, S):
         """Returns actions for given state as per current policy."""
@@ -76,16 +76,16 @@ class Agent():
 
         Params
         ======
-            experiences (Tuple[torch.Tensor]): tuple of (S-states, A-actions, r-rewards, S2-next_states, dones) tuples 
+            experiences (Tuple[torch.Tensor]): tuple of (S-states, A-actions, rewards, S2-next_states, dones) tuples 
             gamma (float): discount factor
         """
-        S, A, r, S2, dones = experiences
+        S, A, rewards, S2, dones = experiences
 
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
         gA2 = self.actor_target(S2)
         gQ2 = self.critic_target(S2, gA2)
-        gQ_target = r + (gamma * gQ2 * (1 - dones))
+        gQ_target = rewards + (gamma * gQ2 * (1 - dones))
         # Compute critic loss
         dQ = self.critic(S, A)
         critic_loss = ((dQ - gQ_target)**2).mean()
@@ -136,26 +136,26 @@ class ReplayBuffer:
         self.A_size = A_size
         self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size
-        self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
+        self.experience = namedtuple("Experience", field_names=["s", "a", "reward", "s2", "done"])
         self.seed = random.seed(seed)
     
-    def add(self, S, A, r, S2, done):
+    def add(self, s, a, reward, s2, done):
         """Add a new experience to memory."""
-        e = self.experience(S, A, r, S2, done)
+        e = self.experience(s, a, reward, s2, done)
         self.memory.append(e)
     
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
 
-        S = torch.from_numpy(np.vstack([e.S for e in experiences if e is not None])).float().to(device)
-        A = torch.from_numpy(np.vstack([e.A for e in experiences if e is not None])).float().to(device)
-        r = torch.from_numpy(np.vstack([e.r for e in experiences if e is not None])).float().to(device)
-        S2 = torch.from_numpy(np.vstack([e.S2 for e in experiences if e is not None])).float().to(device)
+        S = torch.from_numpy(np.vstack([e.s for e in experiences if e is not None])).float().to(device)
+        A = torch.from_numpy(np.vstack([e.a for e in experiences if e is not None])).float().to(device)
+        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
+        S2 = torch.from_numpy(np.vstack([e.s2 for e in experiences if e is not None])).float().to(device)
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
 
-        return (S, A, r, S2, dones)
-
+        return (S, A, rewards, S2, dones)
+    
     def __len__(self):
         """Return the current size of internal memory."""
         return len(self.memory)
