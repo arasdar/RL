@@ -4,6 +4,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def hidden_init(layer):
+    fan_in = layer.weight.data.size()[0]
+    lim = 1. / np.sqrt(fan_in)
+    return (-lim, lim)
+
 class Actor(nn.Module):
     """Actor (Policy) Model."""
 
@@ -28,6 +33,13 @@ class Actor(nn.Module):
         self.bn2 = nn.BatchNorm1d(fc2_units)
         
         self.fc3 = nn.Linear(fc2_units, A_size)
+        
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.weight.data.uniform_(-3e-3, 3e-3)
         
     def forward(self, S):
         """Build an actor (policy) network that maps states -> actions."""
@@ -61,6 +73,13 @@ class Critic(nn.Module):
         self.bn2 = nn.BatchNorm1d(fc2_units)
         
         self.fc3 = nn.Linear(fc2_units, 1)
+        
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.weight.data.uniform_(-3e-3, 3e-3)
         
     def forward(self, S, A):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
