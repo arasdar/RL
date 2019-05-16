@@ -14,7 +14,7 @@ TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-3         # learning rate of the actor 
 LR_CRITIC = 1e-3        # learning rate of the critic
 WEIGHT_DECAY = 0.0000     # L2 weight decay
-BATCH_SIZE = 1024         # minibatch size
+BATCH_SIZE = 1024         # minibatch size/ RAM size
 BUFFER_SIZE = int(1e6)  # replay buffer size
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -84,11 +84,11 @@ class Agent():
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-state actions and Q values from target models
         gA2 = self.actor_target(S2)
-        Q2 = self.critic_target(S2, gA2)
-        Q_target = r + (gamma * Q2 * (1 - dones))
+        gQ2 = self.critic_target(S2, gA2)
+        gQ_target = r + (gamma * gQ2 * (1 - dones))
         # Compute critic loss
-        Q = self.critic(S, A)
-        critic_loss = ((Q - Q_target)**2).mean()
+        dQ = self.critic(S, A)
+        critic_loss = ((dQ - gQ_target)**2).mean()
         #critic_loss = F.mse_loss(Q, Q_target)
         # Minimize the loss
         self.critic_optimizer.zero_grad()
@@ -107,8 +107,8 @@ class Agent():
         self.actor_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
-        self.soft_update(self.critic_local, self.critic_target, TAU)
-        self.soft_update(self.actor_local, self.actor_target, TAU)                     
+        self.soft_update(self.critic, self.critic_target, TAU)
+        self.soft_update(self.actor, self.actor_target, TAU)                     
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
@@ -133,7 +133,7 @@ class ReplayBuffer:
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
         """
-        self.action_size = action_size
+        self.A_size = A_size
         self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
