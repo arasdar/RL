@@ -1,5 +1,5 @@
 from memory3 import ReplayBuffer
-from model32 import Actor, Critic
+from model33 import Actor, Critic
 import random
 
 import torch
