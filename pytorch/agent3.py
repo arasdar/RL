@@ -1,5 +1,5 @@
 from memory3 import ReplayBuffer
-from model33 import Actor, Critic
+from model34 import Actor, Critic
 import random
 
 import torch
@@ -35,7 +35,7 @@ class Agent():
         # Actor Network (w/ Target Network)
         self.actor = Actor(S_size, A_size, random_seed).to(device)
         self.actor_target = Actor(S_size, A_size, random_seed).to(device)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=LR_ACTOR)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=LR_ACTOR, weight_decay=WEIGHT_DECAY)
 
         # Critic Network (w/ Target Network)
         self.critic = Critic(S_size, A_size, random_seed).to(device)

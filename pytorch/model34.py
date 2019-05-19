@@ -7,31 +7,31 @@ import torch.nn.functional as F
 class Actor(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, S_size, A_size, seed, fc_units=400):
+    def __init__(self, S_size, A_size, seed, H_units=400):
         """Initialize parameters and build model.
         Params
         ======
             S_size (int): Dimension of each state
             A_size (int): Dimension of each action
             seed (int): Random seed
-            fc_units (int): Number of nodes in first hidden layer
-            fc_units (int): Number of nodes in second hidden layer
+            H_units (int): Number of nodes in first hidden layer
+            H_units (int): Number of nodes in second hidden layer
         """
         super(Actor, self).__init__()
         
         self.seed = torch.manual_seed(seed)
         
-        self.fc1 = nn.Linear(S_size, fc_units)
-        self.fc2 = nn.Linear(fc_units, fc_units)
+        self.fc1 = nn.Linear(S_size, H_units)
+        self.fc2 = nn.Linear(H_units, H_units)
         
-        self.bn1 = nn.BatchNorm1d(fc_units)
-        self.bn2 = nn.BatchNorm1d(fc_units)
+        self.bn1 = nn.BatchNorm1d(H_units)
+        self.bn2 = nn.BatchNorm1d(H_units)
         
-        self.fc3 = nn.Linear(fc_units, A_size)
+        self.fc3 = nn.Linear(H_units, A_size)
         
-        self.reset_parameters()
+        self.init_parameters()
 
-    def reset_parameters(self):
+    def init_parameters(self):
         self.fc1.weight.data.uniform_(-3e-3, 3e-3)
         self.fc2.weight.data.uniform_(-3e-3, 3e-3)
         self.fc3.weight.data.uniform_(-3e-3, 3e-3)
@@ -47,31 +47,31 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     """Critic (Value) Model."""
 
-    def __init__(self, S_size, A_size, seed, fc_units=400):
+    def __init__(self, S_size, A_size, seed, H_units=400):
         """Initialize parameters and build model.
         Params
         ======
             S_size (int): Dimension of each state
             A_size (int): Dimension of each action
             seed (int): Random seed
-            fc_units (int): Number of nodes in first hidden layer
-            fc_units (int): Number of nodes in second hidden layer
+            H_units (int): Number of nodes in first hidden layer
+            H_units (int): Number of nodes in second hidden layer
         """
         super(Critic, self).__init__()
         
         self.seed = torch.manual_seed(seed)
         
-        self.fc1 = nn.Linear(S_size, fc_units)
-        self.fc2 = nn.Linear(fc_units+A_size, fc_units)
+        self.fc1 = nn.Linear(S_size, H_units)
+        self.fc2 = nn.Linear(H_units+A_size, H_units)
         
-        self.bn1 = nn.BatchNorm1d(fc_units)
-        self.bn2 = nn.BatchNorm1d(fc_units)
+        self.bn1 = nn.BatchNorm1d(H_units)
+        self.bn2 = nn.BatchNorm1d(H_units)
         
-        self.fc3 = nn.Linear(fc_units, 1)
+        self.fc3 = nn.Linear(H_units, 1)
         
-        self.reset_parameters()
+        self.init_parameters()
 
-    def reset_parameters(self):
+    def init_parameters(self):
         self.fc1.weight.data.uniform_(-3e-3, 3e-3)
         self.fc2.weight.data.uniform_(-3e-3, 3e-3)
         self.fc3.weight.data.uniform_(-3e-3, 3e-3)
