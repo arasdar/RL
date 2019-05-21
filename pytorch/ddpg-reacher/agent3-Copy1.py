@@ -1,16 +1,13 @@
 from memory3 import ReplayBuffer
-from model34 import Actor, Critic
+from model4 import G, D
 import random
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-GAMMA = 0.99            # discount factor
-LR_ACTOR = 1e-3         # learning rate of the actor 
-LR_CRITIC = 1e-3        # learning rate of the critic
-WEIGHT_DECAY = 0.0000     # L2 weight decay
-BATCH_SIZE = 1024         # minibatch size/ RAM size
+LR = 1e-3 # learning rate
+BATCH_SIZE = 1024       # minibatch size/ RAM size
 BUFFER_SIZE = int(1e6)  # replay buffer size
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -34,12 +31,12 @@ class Agent():
         # Actor Network (w/ Target Network)
         self.actor = Actor(S_size, A_size, random_seed).to(device)
         self.actor_target = Actor(S_size, A_size, random_seed).to(device)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=LR_ACTOR, weight_decay=WEIGHT_DECAY)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=LR)
 
         # Critic Network (w/ Target Network)
         self.critic = Critic(S_size, A_size, random_seed).to(device)
         self.critic_target = Critic(S_size, A_size, random_seed).to(device)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=LR)
 
         # Replay memory
         self.memory = ReplayBuffer(A_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
@@ -49,16 +46,27 @@ class Agent():
         # Save experience / reward
         self.memory.add(s, a, reward, s2, done)
 
-    def act(self, S):
+    def act(self, S, S_):
         """Returns actions for given state as per current policy."""
         S = torch.from_numpy(S).float().to(device)
+        S_ = torch.from_numpy(S_).float().to(device)
         self.actor.eval()
         with torch.no_grad():
-            A = self.actor(S).cpu().data.numpy()
+            A = self.actor(S, S_).cpu().data.numpy()
         self.actor.train()
         return A # action [-1, 1]
 
-    def start_learn(self):
+    def env(self, S, A):
+        """Returns next_states for given state and action as the next predicted state of agent's environment(agent_env)."""
+        S = torch.from_numpy(S).float().to(device)
+        S_ = torch.from_numpy(S_).float().to(device)
+        self.D.eval()
+        with torch.no_grad():
+            A = self.D(S, A).cpu().data.numpy()
+        self.D.train()
+        return A # action [-1, 1]
+    
+    def learn(self):
         if len(self.memory) > BATCH_SIZE:
             experiences = self.memory.sample()
             self.learn(experiences, GAMMA)
@@ -108,8 +116,8 @@ class Agent():
 
     def soft_update(self, local_model, target_model, gamma):
         """Soft update model parameters.
-        θ_target = τ*θ_local + (1 - τ)*θ_target
-        θ_target = (1-gamma)*θ_local + gamma*θ_target
+        θ_target = τ*θ_local + (1 - τ)*θ_target ###OLD
+        θ_target = (1-gamma)*θ_local + gamma*θ_target ###NEW
 
         Params
         ======
