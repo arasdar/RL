@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class G(nn.Module):
-    """Action genertor or actor (Policy) Model."""
+    """Action generator or actor (Policy) Model."""
 
     def __init__(self, S_size, A_size, seed, H_units=400):
         """Initialize parameters and build model.
@@ -40,7 +40,7 @@ class G(nn.Module):
 
 
 class D(nn.Module):
-    """Discriminator & Decoder (Value) Model."""
+    """Next state predictor/Decoder & final state predictor/Discriminator (Value) Model."""
 
     def __init__(self, S_size, A_size, seed, H_units=400):
         """Initialize parameters and build model.

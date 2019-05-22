@@ -1,4 +1,4 @@
-from memory3 import ReplayBuffer
+from memory4 import Memory
 from model4 import G, D
 import random
 
@@ -39,8 +39,8 @@ class Agent():
         self.d_target = D(S_size, A_size, random_seed).to(device)
         self.d_optimizer = optim.Adam(self.d.parameters(), lr=LR)
 
-        # Replay memory
-        self.memory = ReplayBuffer(A_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
+        # ReplayBuffer/ Memory
+        self.memory = Memory(A_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
     
     def step(self, s, a, reward, s2, done):
         """Save experience in replay memory, and use random sample from buffer to learn."""
@@ -65,7 +65,7 @@ class Agent():
         """Update G and D parameters using given batch of experience tuples.
         Q_target = r + γ * d_target(S2, g_target(S2))
         where:
-            g_target(S) -> A
+            g_target(S) -> A-policy
             d_target(S, A) -> Q-value
 
         Params
@@ -76,13 +76,12 @@ class Agent():
         S, A, rewards, S2, dones = experiences
 
         # ---------------------------- update D ---------------------------- #
-        # Get predicted next-state actions and Q values from target models
-        gA2 = self.g_target(S2)
-        gQ2 = self.d_target(S2, gA2)
-        gQ_target = rewards + (gamma * gQ2 * (1 - dones))
+        A2 = self.g_target(S2)
+        Q2 = self.d_target(S2, A2)
+        Q_target = rewards + (gamma * Q2 * (1 - dones))
         # Compute dloss
-        dQ = self.d(S, A)
-        dloss = ((dQ - gQ_target)**2).mean()
+        Q = self.d(S, A)
+        dloss = ((Q - Q_target)**2).mean()
         #dloss = F.mse_loss(Q, Q_target)
         # Minimize the loss
         self.d_optimizer.zero_grad()
@@ -92,8 +91,8 @@ class Agent():
 
         # ---------------------------- update G ---------------------------- #
         # Compute gloss
-        gA = self.g(S)
-        gQ = self.d(S, gA)
+        A = self.g(S)
+        gQ = self.d(S, A)
         gloss = -gQ.mean()
         # Minimize the loss
         self.g_optimizer.zero_grad()
@@ -106,8 +105,7 @@ class Agent():
 
     def soft_update(self, local_model, target_model, gamma):
         """Soft update model parameters.
-        θ_target = τ*θ_local + (1 - τ)*θ_target
-        θ_target = (1-gamma)*θ_local + gamma*θ_target
+        θ_target = (1-γ)*θ_local + γ*θ_target
 
         Params
         ======
