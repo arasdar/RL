@@ -35,7 +35,7 @@ class Agent():
         self.g_optimizer = optim.Adam(self.g.parameters(), lr=LR)
 
         # Critic Network (w/ Target Network)
-        self.d = D(s_size, s_size, random_seed).to(device)
+        self.d = D(s_size, a_size, random_seed).to(device)
         self.d_target = D(s_size, a_size, random_seed).to(device)
         self.d_optimizer = optim.Adam(self.d.parameters(), lr=LR)
 
@@ -70,7 +70,8 @@ class Agent():
 
         Params
         ======
-            experiences (Tuple[torch.Tensor]): tuple of (S-states, A-actions, rewards, S2-next_states, dones) tuples 
+            experiences (Tuple[torch.Tensor]): tuple of (S     , A      , rewards, S2         , dones) tuples 
+            experiences (Tuple[torch.Tensor]): tuple of (states, actions, rewards, next_states, dones) tuples 
             gamma (float): discount factor
         """
         S, A, rewards, S2, dones = experiences

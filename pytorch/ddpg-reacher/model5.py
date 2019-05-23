@@ -20,11 +20,11 @@ class G(nn.Module):
         
         self.seed = torch.manual_seed(seed)
         
-        self.fc1 = nn.Linear(s_size, h_units)
+        self.fc1 = nn.Linear(s_size, h_size)
         
-        self.bn1 = nn.BatchNorm1d(h_units)
+        self.bn1 = nn.BatchNorm1d(h_size)
         
-        self.fc2 = nn.Linear(h_units, a_size)
+        self.fc2 = nn.Linear(h_size, a_size)
         
         self.init_parameters()
 
@@ -42,27 +42,27 @@ class G(nn.Module):
 class D(nn.Module):
     """Next state predictor/Decoder & final state predictor/Discriminator (Value) Model."""
 
-    def __init__(self, s_size, a_size, seed, h_units=400):
+    def __init__(self, s_size, a_size, seed, h_size=400):
         """Initialize parameters and build model.
         Params
         ======
             s_size (int): Dimension of each state
             a_size (int): Dimension of each action
             seed (int): Random seed
-            h_units (int): Number of nodes in first hidden layer
-            h_units (int): Number of nodes in second hidden layer
+            h_size (int): Number of nodes in first hidden layer
+            h_size (int): Number of nodes in second hidden layer
         """
         super(D, self).__init__()
         
         self.seed = torch.manual_seed(seed)
         
-        self.fc1 = nn.Linear(s_size, h_units)
-        self.fc2 = nn.Linear(h_units+a_size, h_units)
+        self.fc1 = nn.Linear(s_size, h_size)
+        self.fc2 = nn.Linear(h_size+a_size, h_size)
         
-        self.bn1 = nn.BatchNorm1d(h_units)
-        self.bn2 = nn.BatchNorm1d(h_units)
+        self.bn1 = nn.BatchNorm1d(h_size)
+        self.bn2 = nn.BatchNorm1d(h_size)
         
-        self.fc3 = nn.Linear(h_units, 1)
+        self.fc3 = nn.Linear(h_size, 1)
         
         self.init_parameters()
 
@@ -75,8 +75,8 @@ class D(nn.Module):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
         H = F.leaky_relu(self.bn1(self.fc1(S)))
         
-        H = torch.cat((H, A), dim=1)
+        HA = torch.cat((H, A), dim=1)
         
-        H = F.leaky_relu(self.bn2(self.fc2(H)))
+        H = F.leaky_relu(self.bn2(self.fc2(HA)))
         
         return self.fc3(H)

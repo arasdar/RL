@@ -33,7 +33,7 @@ class Memory:
 
         S = torch.from_numpy(np.vstack([e.s for e in experiences if e is not None])).float().to(device)
         A = torch.from_numpy(np.vstack([e.a for e in experiences if e is not None])).float().to(device)
-        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
+        rewards = torch.from_numpy(np.vstack([e.r for e in experiences if e is not None])).float().to(device)
         S2 = torch.from_numpy(np.vstack([e.s2 for e in experiences if e is not None])).float().to(device)
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
 
