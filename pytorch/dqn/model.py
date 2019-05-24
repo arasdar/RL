@@ -3,26 +3,35 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class QNetwork(nn.Module):
-    """Actor (Policy) Model."""
+#class Q(nn.Module):
+    """Q network and actor (Policy) Model/network at the same time."""
 
-    def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64):
+    def __init__(self, s_size, a_size, random_seed, h_size=64):
         """Initialize parameters and build model.
         Params
         ======
-            state_size (int): Dimension of each state
-            action_size (int): Dimension of each action
-            seed (int): Random seed
-            fc1_units (int): Number of nodes in first hidden layer
-            fc2_units (int): Number of nodes in second hidden layer
+            s_size (int): Dimension of each state (s)
+            a_size (int): Dimension of each action (a)
+            random_seed (int): Random seed
+            h_size (int): Number of nodes in first hidden layer (h)
         """
         super(QNetwork, self).__init__()
-        self.seed = torch.manual_seed(seed)
-        self.fc1 = nn.Linear(state_size, fc1_units)
-        self.fc2 = nn.Linear(fc1_units, fc2_units)
-        self.fc3 = nn.Linear(fc2_units, action_size)
+        #super(Q, self).__init__()
+        self.random_seed = torch.manual_seed(random_seed)
+        
+        self.fc1 = nn.Linear(s_size, h_size)
+        self.fc2 = nn.Linear(h_size, a_size)
 
-    def forward(self, state):
-        """Build a network that maps state -> action values."""
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        self.bn1 = nn.BatchNorm1d(h_size)
+
+        self.init_parameters()
+
+    def forward(self, S):
+        """Build a Q-network that maps states -> actions-values."""
+        """Build a Q-network that maps S -> A-Q."""
+        H = F.leaky_relu(self.bn1(self.fc1(S)))
+        return self.fc2(H)
+
+    def init_parameters(self):
+        self.fc1.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
