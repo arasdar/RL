@@ -1,5 +1,5 @@
-from memory5 import Memory
-from model5 import G, D
+from memory import Memory
+from model import G, D
 import random
 
 import torch
@@ -14,27 +14,27 @@ BUFFER_SIZE = int(1e6)  # replay buffer size
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
-    """Interacts with and learns from the environment."""
+    """Interacts with and learns from the environment (env)."""
     
     def __init__(self, s_size, a_size, random_seed):
         """Initialize an Agent object.
         
         Params
         ======
-            s_size (int): dimension of each state
-            a_size (int): dimension of each action
+            s_size (int): dimension of each state (s)
+            a_size (int): dimension of each action (a)
             random_seed (int): random seed
         """
         self.s_size = s_size
         self.a_size = a_size
         self.seed = random.seed(random_seed)
         
-        # Actor Network (w/ Target Network)
+        # G: Generator (actor) Network (with Target Network)
         self.g = G(s_size, a_size, random_seed).to(device)
         self.g_target = G(s_size, a_size, random_seed).to(device)
         self.g_optimizer = optim.Adam(self.g.parameters(), lr=LR)
 
-        # Critic Network (w/ Target Network)
+        # D: Discriminator (critic) or Decoder (predictor) Network (with Target Network)
         self.d = D(s_size, a_size, random_seed).to(device)
         self.d_target = D(s_size, a_size, random_seed).to(device)
         self.d_optimizer = optim.Adam(self.d.parameters(), lr=LR)
@@ -42,19 +42,20 @@ class Agent():
         # ReplayBuffer/ Memory
         self.memory = Memory(a_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
     
+    #def step(self, state, action, reward, next_state, done/terminal):
     def step(self, s, a, r, s2, done):
         """Save experience in replay memory, and use random sample from buffer to learn."""
-        # Save experience / reward
+        # Save experience / reward (r)
         self.memory.add(s, a, r, s2, done)
 
     def act(self, s):
-        """Returns an action for a given state as per current policy."""
+        """Returns an action (a) (as per current policy) for a given state (s)."""
         s = torch.from_numpy(s).float().to(device)
         self.g.eval()
         with torch.no_grad():
             a = self.g(s).cpu().data.numpy()
         self.g.train()
-        return a # an action between -1 and +1: [-1, 1]
+        return a # tanh(a):[-1, 1]
 
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
@@ -65,8 +66,8 @@ class Agent():
         """Update G and D parameters using given batch of experience tuples.
         Q_target = rewards + γ * d_target(S2, g_target(S2))
         where:
-            g_target(S) -> A-policy
-            d_target(S, A) -> Q-value
+            g_target(S) -> A-actions and S: states
+            d_target(S, A) -> Q-values
 
         Params
         ======
@@ -76,7 +77,8 @@ class Agent():
         """
         S, A, rewards, S2, dones = experiences
 
-        # ---------------------------- update D ---------------------------- #
+        # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
+        # ---------------------------- update D: Discriminator (critic) & Decoder (predictor) ---------------------------- #
         A2 = self.g_target(S2)
         Q2 = self.d_target(S2, A2)
         Q_target = rewards + (gamma * Q2 * (1 - dones))
@@ -90,7 +92,7 @@ class Agent():
         #torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
         self.d_optimizer.step()
 
-        # ---------------------------- update G ---------------------------- #
+        # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         # Compute gloss
         A = self.g(S)
         gQ = self.d(S, A)
@@ -106,13 +108,14 @@ class Agent():
 
     def soft_update(self, local_model, target_model, gamma):
         """Soft update model parameters.
+        γ: GAMMA ~ 0.9999
         θ_target = (1-γ)*θ_local + γ*θ_target
 
         Params
         ======
             local_model: PyTorch model (weights will be copied from)
             target_model: PyTorch model (weights will be copied to)
-            tau (float): interpolation parameter 
+            gamma (float): interpolation parameter 
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(((1-gamma)*local_param.data) + (gamma*target_param.data))

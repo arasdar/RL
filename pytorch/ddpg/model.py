@@ -5,14 +5,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class G(nn.Module):
-    """Action generator or actor (Policy) Model."""
+    """Action generator or actor (policy) Model."""
 
     def __init__(self, s_size, a_size, seed, h_size=400):
         """Initialize parameters and build model.
         Params
         ======
-            s_size (int): Dimension of each state
-            a_size (int): Dimension of each action
+            s_size (int): Dimension of each state (s)
+            a_size (int): Dimension of each action (a)
             seed (int): Random seed
             h_size (int): Number of nodes in first hidden layer
         """
@@ -29,25 +29,26 @@ class G(nn.Module):
         self.init_parameters()
 
     def init_parameters(self):
-        self.fc1.weight.data.uniform_(-3e-3, 3e-3)
-        self.fc2.weight.data.uniform_(-3e-3, 3e-3)
+        self.fc1.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         
     def forward(self, S):
-        """Build an actor (policy) network that maps states -> actions."""
+        """Build an actor (policy) network that maps states (S) -> actions (A)."""
+        """Build a generator network that maps state (s) -> action (a)."""
         H = F.leaky_relu(self.bn1(self.fc1(S))) # H: hiddden layer/output
 
-        return torch.tanh(self.fc2(H))
+        return torch.tanh(self.fc2(H)) # [-1, +1]
 
 
 class D(nn.Module):
-    """Next state predictor/Decoder & final state predictor/Discriminator (Value) Model."""
+    """Decoder (next/final state predictor) & Discriminator (Value/evaluator/critic/examiner/final state predictor) Model."""
 
     def __init__(self, s_size, a_size, seed, h_size=400):
         """Initialize parameters and build model.
         Params
         ======
-            s_size (int): Dimension of each state
-            a_size (int): Dimension of each action
+            s_size (int): Dimension of each state (s)
+            a_size (int): Dimension of each action (a)
             seed (int): Random seed
             h_size (int): Number of nodes in first hidden layer
             h_size (int): Number of nodes in second hidden layer
@@ -67,12 +68,15 @@ class D(nn.Module):
         self.init_parameters()
 
     def init_parameters(self):
-        self.fc1.weight.data.uniform_(-3e-3, 3e-3)
-        self.fc2.weight.data.uniform_(-3e-3, 3e-3)
-        self.fc3.weight.data.uniform_(-3e-3, 3e-3)
+        self.fc1.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         
     def forward(self, S, A):
-        """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
+        """Build a Descriminator/Decoder (predictor) network that maps (states, actions) pairs -> values."""
+        """Build a Descriminator/Decoder (predictor) network that maps (S, A) pairs -> Q."""
+        """Build a critic (value) network that maps (state, action) pairs -> value."""
+        """Build a Descriminator/Decoder (predictor) network that maps (s, a) pairs -> q."""
         H = F.leaky_relu(self.bn1(self.fc1(S)))
         
         HA = torch.cat((H, A), dim=1)
