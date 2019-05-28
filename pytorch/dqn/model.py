@@ -2,9 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class QNetwork(nn.Module):
-#class Q(nn.Module):
-    """Q network and actor (Policy) Model/network at the same time."""
+class Q(nn.Module):
+    """Value network and actor (Policy) Model/network at the same time."""
 
     def __init__(self, s_size, a_size, random_seed, h_size=64):
         """Initialize parameters and build model.
@@ -15,8 +14,7 @@ class QNetwork(nn.Module):
             random_seed (int): Random seed
             h_size (int): Number of nodes in first hidden layer (h)
         """
-        super(QNetwork, self).__init__()
-        #super(Q, self).__init__()
+        super(Q, self).__init__()
         self.random_seed = torch.manual_seed(random_seed)
         
         self.fc1 = nn.Linear(s_size, h_size)
