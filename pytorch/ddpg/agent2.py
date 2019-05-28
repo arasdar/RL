@@ -1,5 +1,5 @@
-from memory import Memory
-from model import G, D
+from memory2 import Memory
+from model2 import G, D
 import random
 
 import torch
@@ -50,7 +50,7 @@ class Agent():
         self.memory.add(s, a, r, s2, done, s_, s2_)
 
     def act(self, s, s_):
-        """Returns an action (a) (as per current policy) for a given state (s) and a predicted state."""
+        """Returns an action (a) (as per current policy) for a given state (s) and a predicted state (s_)."""
         s = torch.from_numpy(s).float().to(device)
         s_ = torch.from_numpy(s_).float().to(device)
         self.g.eval() # train=false
@@ -61,11 +61,12 @@ class Agent():
 
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
-            experiences = self.memory.sample()
-            self.learn(experiences, GAMMA)
+            E = self.memory.sample()
+            self.learn(E, GAMMA)
         
-    def learn(self, experiences, gamma):
+    def learn(self, E, γ):
         """Update G and D parameters using given batch of experience (e) tuples.
+        γ = gamma
         A2 = g_target(S2, S2_)
         Q = rewards + γ * d_target(S2, A2)
         where:
@@ -86,7 +87,7 @@ class Agent():
         # ---------------------------- update D: Discriminator (critic) & Decoder (predictor) ---------------------------- #
         A2 = self.g_target(S2, S2_)
         _, Q2 = self.d_target(S2, A2) # S3_
-        Q = rewards + (gamma * Q2 * (1 - dones))
+        Q = rewards + (γ * Q2 * (1 - dones))
         # Compute dloss
         dS2, dQ = self.d(S, A)
         dloss = ((dQ - Q)**2).mean()
@@ -110,12 +111,11 @@ class Agent():
         self.g_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
-        self.soft_update(self.d, self.d_target, gamma)
-        self.soft_update(self.g, self.g_target, gamma)                     
+        self.soft_update(self.d, self.d_target, γ)
+        self.soft_update(self.g, self.g_target, γ)                     
 
-    def soft_update(self, local_model, target_model, gamma):
+    def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
-        γ: GAMMA ~ 0.9999
         θ_target = (1-γ)*θ_local + γ*θ_target
 
         Params
@@ -125,4 +125,4 @@ class Agent():
             gamma (float): interpolation parameter 
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
-            target_param.data.copy_(((1-gamma)*local_param.data) + (gamma*target_param.data))
+            target_param.data.copy_(((1-γ)*local_param.data) + (γ*target_param.data))
