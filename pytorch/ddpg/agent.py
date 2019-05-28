@@ -51,10 +51,10 @@ class Agent():
     def act(self, s):
         """Returns an action (a) (as per current policy) for a given state (s)."""
         s = torch.from_numpy(s).float().to(device)
-        self.g.eval()
+        self.g.eval() # validation/test/inference
         with torch.no_grad():
             a = self.g(s).cpu().data.numpy()
-        self.g.train()
+        self.g.train() # train
         return a # tanh(a):[-1, 1]
 
     def start_learn(self):

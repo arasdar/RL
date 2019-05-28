@@ -7,18 +7,18 @@ import torch.nn.functional as F
 class G(nn.Module):
     """Action generator or actor (policy) Model."""
 
-    def __init__(self, s_size, a_size, seed, h_size=400):
+    def __init__(self, s_size, a_size, random_seed, h_size=400):
         """Initialize parameters and build model.
         Params
         ======
             s_size (int): Dimension of each state (s)
             a_size (int): Dimension of each action (a)
-            seed (int): Random seed
+            random_seed (int): Random seed
             h_size (int): Number of nodes in first hidden layer
         """
         super(G, self).__init__()
         
-        self.seed = torch.manual_seed(seed)
+        self.random_seed = torch.manual_seed(random_seed)
         
         self.fc1 = nn.Linear(s_size, h_size)
         
@@ -43,19 +43,19 @@ class G(nn.Module):
 class D(nn.Module):
     """Decoder (next/final state predictor) & Discriminator (Value/evaluator/critic/examiner/final state predictor) Model."""
 
-    def __init__(self, s_size, a_size, seed, h_size=400):
+    def __init__(self, s_size, a_size, random_seed, h_size=400):
         """Initialize parameters and build model.
         Params
         ======
             s_size (int): Dimension of each state (s)
             a_size (int): Dimension of each action (a)
-            seed (int): Random seed
+            random_seed (int): Random seed
             h_size (int): Number of nodes in first hidden layer
             h_size (int): Number of nodes in second hidden layer
         """
         super(D, self).__init__()
         
-        self.seed = torch.manual_seed(seed)
+        self.random_seed = torch.manual_seed(random_seed)
         
         self.fc1 = nn.Linear(s_size, h_size)
         self.fc2 = nn.Linear(h_size+a_size, h_size)
