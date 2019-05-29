@@ -145,8 +145,8 @@ class Agent():
         # Compute gloss
         A = self.g(S, S_)
         gS2, gQ = self.d(S, A)
-        gloss = -gQ.mean() 
-        gloss += -gS2.mean()
+        gloss = -gQ.mean() # increase total future reward - greed
+        gloss += -((gS2 - S2)**2).mean() # increase the difference between the next state and the predicted one - curosity
         # Minimize the loss
         self.g_optimizer.zero_grad()
         gloss.backward()
