@@ -55,7 +55,10 @@ class Agent():
         s_ = torch.from_numpy(s_).float().to(device)
         self.g.eval() # train=false
         with torch.no_grad():
-            a = self.g(s, s_).cpu().data.numpy()
+            a = self.g(s, s_)
+            #print(a.shape)
+            a = a.cpu().data.numpy()#.reshape([1, -1])
+            #print(a.shape)
         self.g.train() # train=true
         return a # tanh(a):[-1, 1]
 
@@ -65,9 +68,13 @@ class Agent():
         a = torch.from_numpy(a).float().to(device)
         self.d.eval() # train=false
         with torch.no_grad():
-            s2_, q_ = self.d(s, a).cpu().data.numpy()
+            s2, q = self.d(s, a)
+            #print(s2.shape, q.shape)
+            q = q.cpu().data.numpy()
+            s2 = s2.cpu().data.numpy()
+            #print(s2.shape, q.shape)
         self.d.train() # train=true
-        return s2_, q_ # tanh(a):[-1, 1]
+        return s2, q
     
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
@@ -85,12 +92,12 @@ class Agent():
 
         Params
         ======
-            experiences (Tuple[torch.Tensor]): tuple of (S     , A      , rewards, S2         , dones, S_, S2_) tuples 
+            E (Tuple[torch.Tensor]): tuple of (S     , A      , rewards, S2         , dones, S_, S2_) tuples 
             experiences (Tuple[torch.Tensor]): tuple of (states, actions, rewards, next_states, dones) tuples .....
             ... S_: pred_states, S2_: pred_next_states
             gamma (float): discount factor
         """
-        S, A, rewards, S2, dones, S_, S2_ = experiences
+        S, A, rewards, S2, dones, S_, S2_ = E # E: expriences, e: exprience
 
         # ---------------------------- update D: next state and final state predictor --------------- #
         # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
