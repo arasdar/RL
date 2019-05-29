@@ -59,6 +59,16 @@ class Agent():
         self.g.train() # train=true
         return a # tanh(a):[-1, 1]
 
+    def env(self, s, a):
+        """Requires an action (a) (as per current policy) and a given state (s) for predicting next state (s2_) and total future rewards (q_)."""
+        s = torch.from_numpy(s).float().to(device)
+        a = torch.from_numpy(a).float().to(device)
+        self.d.eval() # train=false
+        with torch.no_grad():
+            s2_, q_ = self.d(s, a).cpu().data.numpy()
+        self.d.train() # train=true
+        return s2_, q_ # tanh(a):[-1, 1]
+    
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample()

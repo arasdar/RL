@@ -70,8 +70,8 @@ class D(nn.Module):
         self.fc2 = nn.Linear(h_size+a_size, h_size)
         self.bn2 = nn.BatchNorm1d(h_size)
         
-        self.fc3_s = nn.Linear(h_size, s_size, requires_grad=False) # Decoding/predicting next state
-        self.fc3_q = nn.Linear(s_size, 1, requires_grad=False) # Decoding/predicting final state
+        self.fc3_s = nn.Linear(h_size, s_size) # Decoding/predicting next state
+        self.fc3_q = nn.Linear(h_size, 1) # Decoding/predicting final state
         
         self.init_parameters()
 
@@ -80,6 +80,12 @@ class D(nn.Module):
         self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc3_s.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc3_q.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        
+        # we want to freeze the fc3 layers
+        self.fc3_s.weight.requires_grad = False
+        self.fc3_s.bias.requires_grad = False
+        self.fc3_q.weight.requires_grad = False
+        self.fc3_q.bias.requires_grad = False
         
     def forward(self, S, A):
         """Build a Descriminator/Decoder (predictor) network that maps (states, actions) pairs -> values."""
