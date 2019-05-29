@@ -79,12 +79,16 @@ class Agent():
     def start_dlearn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample()
-            return self.dlearn(E, GAMMA)
+            dloss = self.dlearn(E, GAMMA)
+            return dloss.cpu().data.numpy()
+        else: return 0
         
     def start_glearn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample()
-            return self.glearn(E, GAMMA)
+            gloss = self.glearn(E, GAMMA)
+            return gloss.cpu().data.numpy()
+        else: return 0
         
     def dlearn(self, E, γ):
         """Update D parameters using given batch of experience (e) tuples.
