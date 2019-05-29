@@ -70,8 +70,8 @@ class D(nn.Module):
         self.fc2 = nn.Linear(h_size+a_size, h_size)
         self.bn2 = nn.BatchNorm1d(h_size)
         
-        self.fc3_s = nn.Linear(h_size, s_size) # Decoding/predicting next state
-        self.fc3_q = nn.Linear(h_size, 1) # Decoding/predicting final state
+        self.fc3_s = nn.Linear(h_size, s_size) # Decoding/predicting next state: Decoder
+        self.fc3_q = nn.Linear(h_size, 1) # Decoding/predicting final state: Discriminator
         
         self.init_parameters()
 

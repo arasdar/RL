@@ -1,5 +1,5 @@
-from memory2 import Memory
-from model2 import G, D
+from memory import Memory
+from model import G, D
 import random
 
 import torch
@@ -139,7 +139,7 @@ class Agent():
         ======
             local_model: PyTorch model (weights will be copied from)
             target_model: PyTorch model (weights will be copied to)
-            gamma (float): interpolation parameter 
+            γ (float): interpolation parameter 
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(((1-γ)*local_param.data) + (γ*target_param.data))
