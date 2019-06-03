@@ -116,9 +116,11 @@ class Agent():
         Q = rewards + (γ * Q2 * (1 - dones))
         # Compute dloss
         dS2, dQ = self.d(S, A)
-        dloss = ((dQ - Q)**2).mean()
-        dloss += ((dS2 - S2)**2).mean()
-        #dloss = F.mse_loss(Q, Q_target)
+        #dloss = ((dQ - Q)**2).mean()
+        #dloss += (torch.sum(((dS2 - S2)**2), dim=1).mean()
+        dloss = F.mse_loss(dQ, Q)
+        dloss += F.mse_loss(dS2, S2)
+        
         # Minimize the loss
         self.d_optimizer.zero_grad()
         dloss.backward()
@@ -145,7 +147,9 @@ class Agent():
         A = self.g(S)
         gS2, gQ = self.d(S, A)
         gloss = -gQ.mean() # increase/max total future reward/dopamine
-        gloss += -((gS2 - S2)**2).mean() # increase/max the difference between the next state and the predicted one - curosity/surprise
+        #gloss += -(torch.sum(((dS2 - S2)**2), dim=1).mean() # increase/max the difference between the next state and the predicted one - curosity/surprise
+        gloss += -F.mse_loss(gS2, S2)
+
         # Minimize the loss
         self.g_optimizer.zero_grad()
         gloss.backward()
