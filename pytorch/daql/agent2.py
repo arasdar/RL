@@ -60,34 +60,6 @@ class Agent():
             #print(a.shape)
         self.g.train() # train=true
         return a # tanh(a):[-1, 1]
-
-#     def env(self, s, a):
-#         """Requires an action (a) and a given state (s) for predicting next state (s2_) and total future reward (q)."""
-#         s = torch.from_numpy(s).float().to(device)
-#         a = torch.from_numpy(a).float().to(device)
-#         self.d.eval() # train=false
-#         with torch.no_grad():
-#             s2, q = self.d(s, a)
-#             #print(s2.shape, q.shape)
-#             q = q.cpu().data.numpy()
-#             s2 = s2.cpu().data.numpy()
-#             #print(s2.shape, q.shape)
-#         self.d.train() # train=true
-#         return s2, q
-    
-    def start_dlearn(self):
-        if len(self.memory) > BATCH_SIZE:
-            E = self.memory.sample()
-            dloss = self.dlearn(E, GAMMA)
-            return dloss.cpu().data.numpy()
-        else: return 0
-        
-    def start_glearn(self):
-        if len(self.memory) > BATCH_SIZE:
-            E = self.memory.sample()
-            gloss = self.glearn(E, GAMMA)
-            return gloss.cpu().data.numpy()
-        else: return 0
         
     def dlearn(self, E, γ):
         """Update D parameters using given batch of experience (e) tuples.
@@ -116,7 +88,9 @@ class Agent():
         Q = rewards + (γ * Q2 * (1 - dones))
         # Compute dloss
         dQ = self.d(S, A)
-        dloss = ((dQ - Q)**2).mean()
+        #dloss = ((dQ - Q)**2).mean()
+        dloss = torch.abs(dQ - Q).mean()
+        #print(dQ.shape, Q.shape, γ)
         #dloss += (torch.sum(((dS2 - S2)**2), dim=1)).mean()
         #dloss = F.mse_loss(dQ, Q)
         #dloss += F.mse_loss(dS2, S2)
@@ -129,8 +103,20 @@ class Agent():
 
         # ----------------------- update target networks ----------------------- #
         self.soft_update(self.d, self.d_target, γ)
-        return dloss
+        return dloss, dQ.mean(), Q.mean()
 
+    def start_dlearn(self):
+        if len(self.memory) > BATCH_SIZE:
+            E = self.memory.sample()
+            dloss, dQ, Q = self.dlearn(E, GAMMA)
+            dloss = dloss.cpu().data.numpy()
+            dQ = dQ.cpu().data.numpy()
+            Q = Q.cpu().data.numpy()
+            #print(Q.shape, dQ.shape)
+            #print(Q, dQ)
+            return dloss, dQ, Q
+        else: return 0, 0, 0
+        
     def glearn(self, E, γ):
         """Update G parameters using given batch of experience (e) tuples.
 
@@ -158,6 +144,15 @@ class Agent():
         # ----------------------- update target networks ----------------------- #        
         self.soft_update(self.g, self.g_target, γ)
         return gloss
+    
+    def start_glearn(self):
+        if len(self.memory) > BATCH_SIZE:
+            E = self.memory.sample()
+            gloss = self.glearn(E, GAMMA)
+            gloss = gloss.cpu().data.numpy()
+            return gloss
+        else: return 0
+
     
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
