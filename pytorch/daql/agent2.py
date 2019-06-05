@@ -112,12 +112,12 @@ class Agent():
         # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
         # ---------------------------- update D: Discriminator (critic) & Decoder (predictor) ---------------------------- #
         A2 = self.g_target(S2)
-        _, Q2 = self.d_target(S2, A2)
+        Q2 = self.d_target(S2, A2)
         Q = rewards + (γ * Q2 * (1 - dones))
         # Compute dloss
-        dS2, dQ = self.d(S, A)
+        dQ = self.d(S, A)
         dloss = ((dQ - Q)**2).mean()
-        dloss += (torch.sum(((dS2 - S2)**2), dim=1)).mean()
+        #dloss += (torch.sum(((dS2 - S2)**2), dim=1)).mean()
         #dloss = F.mse_loss(dQ, Q)
         #dloss += F.mse_loss(dS2, S2)
         
@@ -145,7 +145,7 @@ class Agent():
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         # Compute gloss
         A = self.g(S)
-        gS2, gQ = self.d(S, A)
+        gQ = self.d(S, A)
         gloss = -gQ.mean() # increase/max total future reward/dopamine
         #gloss += -(torch.sum(((gS2 - S2)**2), dim=1)).mean() # increase/max the difference between the next state and the predicted one - curosity/surprise
         #gloss += -F.mse_loss(gS2, S2)
