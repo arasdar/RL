@@ -147,7 +147,7 @@ class Agent():
         A = self.g(S)
         gS2, gQ = self.d(S, A)
         gloss = -gQ.mean() # increase/max total future reward/dopamine
-        gloss += -(torch.sum(((gS2 - S2)**2), dim=1)).mean() # increase/max the difference between the next state and the predicted one - curosity/surprise
+        #gloss += -(torch.sum(((gS2 - S2)**2), dim=1)).mean() # increase/max the difference between the next state and the predicted one - curosity/surprise
         #gloss += -F.mse_loss(gS2, S2)
 
         # Minimize the loss
