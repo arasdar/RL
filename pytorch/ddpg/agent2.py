@@ -1,5 +1,5 @@
 from memory import Memory
-from model import G, D
+from model2 import G, D
 import random
 
 import torch
@@ -60,13 +60,15 @@ class Agent():
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample() # E: expriences
-            dloss, gloss = self.learn(E, GAMMA)
+            dloss, gloss, dloss_Q, dloss_S = self.learn(E, GAMMA)
             #print(dloss, gloss)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
+            dloss_Q = dloss_Q.cpu().data.numpy()
+            dloss_S = dloss_S.cpu().data.numpy()
             #print(dloss, gloss)
-            return dloss, gloss
-        else: return 0, 0
+            return dloss, gloss, dloss_Q, dloss_S
+        else: return 0, 0, 0, 0
         
     def learn(self, E, γ): # γ: gamma
         """Update G and D parameters using given batch of experience (e) tuples.
@@ -86,12 +88,14 @@ class Agent():
         # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
         # ---------------------------- update D: Discriminator (critic) & Decoder (predictor) ---------------------------- #
         A2 = self.g_target(S2)
-        Q2 = self.d_target(S2, A2)
+        _, Q2 = self.d_target(S2, A2)
         Q = rewards + (γ * Q2 * (1 - dones))
         
         # Compute dloss
-        dQ = self.d(S, A)
-        dloss = ((dQ - Q)**2).mean()
+        dS2, dQ = self.d(S, A)
+        dloss_Q = ((dQ - Q)**2).mean()
+        dloss_S = torch.sum((dS2 - S2)**2, dim=1).mean()
+        dloss = dloss_Q + dloss_S
         #dloss = F.mse_loss(dQ, Q)
         
         # Minimize the loss
@@ -103,7 +107,7 @@ class Agent():
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         # Compute gloss
         gA = self.g(S)
-        gQ = self.d(S, gA)
+        _, gQ = self.d(S, gA)
         gloss = -gQ.mean()
         
         # Minimize the loss
@@ -115,7 +119,7 @@ class Agent():
         self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
         
-        return dloss, gloss
+        return dloss, gloss, dloss_Q, dloss_S
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
