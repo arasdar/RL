@@ -1,5 +1,5 @@
 from memory2 import Memory
-from model2 import G, D
+from model2 import G, D, Qfixed
 import random
 
 import torch
@@ -35,11 +35,14 @@ class Agent():
         self.g_target = G(s_size, a_size, random_seed).to(device)
         self.g_optimizer = optim.Adam(self.g.parameters(), lr=LR)
 
-        # D: Discriminator (critic) or Decoder (predictor) Network (with Target Network)
+        # D: Decoder (predictor) Network (with Target Network)
         self.d = D(s_size, a_size, random_seed).to(device)
         self.d_target = D(s_size, a_size, random_seed).to(device)
         self.d_optimizer = optim.Adam(self.d.parameters(), lr=LR)
 
+        # Qfixed: Discriminator (critic)
+        self.qfixed = Qfixed(s_size, a_size, random_seed).to(device)
+        
         # ReplayBuffer/ Memory
         self.memory = Memory(a_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
     
@@ -61,7 +64,7 @@ class Agent():
         self.g.train() # train=true
         return a # tanh(a):[-1, 1]
         
-    def dlearn(self, E, γ):
+    def learn(self, E, γ):
         """Update D parameters using given batch of experience (e) tuples.
         γ: gamma
         S: (current) states
@@ -83,77 +86,52 @@ class Agent():
         # ---------------------------- update D: next state and final state predictor --------------- #
         # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
         # ---------------------------- update D: Discriminator (critic) & Decoder (predictor) ---------------------------- #
-        A2 = self.g_target(S2)
-        Q2 = self.d_target(S2, A2)
-        Q = rewards + (γ * Q2 * (1 - dones))
+        #A2 = self.g_target(S2)
+        #Q2 = self.d_target(S2, A2)
+        #Q = rewards + (γ * Q2 * (1 - dones))
         # Compute dloss
-        dQ = self.d(S, A)
-        dloss = ((dQ - Q)**2).mean()
-        #dloss = torch.abs(dQ - Q).mean()
-        #print(dQ.shape, Q.shape, γ)
-        #dloss += (torch.sum(((dS2 - S2)**2), dim=1)).mean()
-        #dloss = F.mse_loss(dQ, Q)
-        #dloss += F.mse_loss(dS2, S2)
+        #dQ = self.d(S, A)
+        #dloss = ((dQ - Q)**2).mean()
         
+        Q = self.qfixed(S2)
+        
+        dS2 = self.d(S, A)
+        dQ = self.qfixed(dS2)
+        
+        dloss = ((dQ - Q)**2).mean()
+        
+        gA = self.g(S)
+        gS2 = self.d(S, gA)
+        gQ = self.qfixed(gS2)
+        
+        dloss += ((gQ - Q)**2).mean()
+        gloss = -((gQ - Q)**2).mean()
+
         # Minimize the loss
         self.d_optimizer.zero_grad()
         dloss.backward()
         #torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
         self.d_optimizer.step()
 
-        # ----------------------- update target networks ----------------------- #
-        self.soft_update(self.d, self.d_target, γ)
-        return dloss #, dQ.mean(), Q.mean()
-
-    def start_dlearn(self):
-        if len(self.memory) > BATCH_SIZE:
-            E = self.memory.sample()
-            #dloss, dQ, Q = self.dlearn(E, GAMMA)
-            dloss = self.dlearn(E, GAMMA)
-            dloss = dloss.cpu().data.numpy()
-            #dQ = dQ.cpu().data.numpy()
-            #Q = Q.cpu().data.numpy()
-            #print(Q.shape, dQ.shape)
-            #print(Q, dQ)
-            return dloss #, dQ, Q
-        else: return 0 #, 0, 0
-        
-    def glearn(self, E, γ):
-        """Update G parameters using given batch of experience (e) tuples.
-
-        Params
-        ======
-            E (Tuple[torch.Tensor]): tuple of (S     , A      , rewards, S2         , dones)
-            experiences (Tuple[torch.Tensor]): tuple of (states, actions, rewards, next_states, dones)
-            γ (float): discount factor
-        """
-        S, A, rewards, S2, dones = E # E: expriences, e: exprience
-
-        # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # Compute gloss
-        A = self.g(S)
-        gQ = self.d(S, A)
-        gloss = -gQ.mean() # increase/max total future reward/dopamine
-        #gloss += -(torch.sum(((gS2 - S2)**2), dim=1)).mean() # increase/max the difference between the next state and the predicted one - curosity/surprise
-        #gloss += -F.mse_loss(gS2, S2)
-
         # Minimize the loss
         self.g_optimizer.zero_grad()
         gloss.backward()
         self.g_optimizer.step()
 
-        # ----------------------- update target networks ----------------------- #        
+        # ----------------------- update target networks ----------------------- #
+        self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
-        return gloss
-    
-    def start_glearn(self):
+        return dloss, gloss
+
+    def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample()
-            gloss = self.glearn(E, GAMMA)
+            #dloss, dQ, Q = self.dlearn(E, GAMMA)
+            dloss, gloss = self.learn(E, GAMMA)
+            dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
-            return gloss
-        else: return 0
-
+            return dloss, gloss
+        else: return 0, 0
     
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.

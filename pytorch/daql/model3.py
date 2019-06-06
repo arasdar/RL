@@ -35,11 +35,6 @@ class G(nn.Module):
         self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         
-#         self.fc1.weight.requires_grad = False
-#         self.fc1.bias.requires_grad = False
-#         self.fc3.weight.requires_grad = False
-#         self.fc3.bias.requires_grad = False
-        
     def forward(self, S):
         """Build an actor (policy) network that maps states (S) and pred_states (S_) -> actions (A)."""
         """Build a generator network that maps state (s) and pred_state (s_) -> action (a)."""
@@ -52,7 +47,7 @@ class G(nn.Module):
 
 
 class D(nn.Module):
-    """Decoder (next/final state predictor) & Discriminator (Value/evaluator/critic/examiner/final state predictor) Model."""
+    """Decoder (next/final state predictor)."""
 
     def __init__(self, s_size, a_size, random_seed, h_size=400):
         """Initialize parameters and build model.
@@ -77,8 +72,8 @@ class D(nn.Module):
         self.fc3 = nn.Linear(h_size, h_size)
         #self.bn3 = nn.BatchNorm1d(h_size)
         
-        #self.fc4_s = nn.Linear(h_size, s_size) # Decoding/predicting next state: Decoder
-        self.fc4 = nn.Linear(h_size, 1) # Decoding/predicting final state: Discriminator
+        self.fc4 = nn.Linear(h_size, s_size) # Decoding/predicting next state: Decoder
+        #self.fc4 = nn.Linear(h_size, 1) # Decoding/predicting final state: Discriminator
         
         self.init_parameters()
 
@@ -87,12 +82,6 @@ class D(nn.Module):
         self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc4.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
-        
-#         # we want to freeze the fc3 layers
-#         self.fc1.weight.requires_grad = False
-#         self.fc1.bias.requires_grad = False
-#         self.fc4.weight.requires_grad = False
-#         self.fc4.bias.requires_grad = False
         
     def forward(self, S, A):
         """Build a Descriminator/Decoder (predictor) network that maps (states, actions) pairs -> values."""
@@ -110,3 +99,39 @@ class D(nn.Module):
         H = F.leaky_relu(self.fc3(H))
         
         return self.fc4(H)
+
+class Qfixed(nn.Module):
+    """Discriminator (Value/evaluator/critic/examiner/final state predictor) Model."""
+
+    def __init__(self, s_size, a_size, random_seed, h_size=400):
+        """Initialize parameters and build model.
+        Params
+        ======
+            s_size (int): Dimension of each state (s)
+            a_size (int): Dimension of each action (a)
+            random_seed (int): Random seed
+            h_size (int): Number of nodes in first hidden layer
+            h_size (int): Number of nodes in second hidden layer
+        """
+        super(D, self).__init__()
+        
+        self.random_seed = torch.manual_seed(random_seed)
+        
+        self.fc = nn.Linear(s_size+a_size, 1)
+        
+        self.init_parameters()
+
+    def init_parameters(self):
+        self.fc1.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        
+        # we want to freeze the FC layer
+        self.fc1.weight.requires_grad = False
+        self.fc1.bias.requires_grad = False
+        
+    def forward(self, S, A):
+        """Build a Descriminator/Decoder (predictor) network that maps (states, actions) pairs -> values."""
+        """Build a Descriminator/Decoder (predictor) network that maps (S, A) pairs -> Q."""
+        """Build a critic (value) network that maps (state, action) pairs -> value."""
+        """Build a Descriminator/Decoder (predictor) network that maps (s, a) pairs -> q."""
+        SA = torch.cat((S, A), dim=1)
+        return self.fc(SA)
