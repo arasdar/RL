@@ -64,7 +64,7 @@ class Agent():
         return a # tanh(a):[-1, 1]
 
     def env(self, s, a):
-        """Requires an action (a) (as per current policy) and a given state (s) for predicting next state (s2_) and total future rewards (q_)."""
+        """Requires an action (a) and a given state (s) for predicting next state (s2_) and total future rewards (q_)."""
         s = torch.from_numpy(s).float().to(device)
         a = torch.from_numpy(a).float().to(device)
         self.d.eval() # train=false
@@ -72,11 +72,14 @@ class Agent():
         with torch.no_grad():
             s2, q = self.d(s, a)
             #print(s2.shape, q.shape)
-            q = q.cpu().data.numpy()
+            #r = torch.sigmoid(q) # [-1, 1]
+            r = torch.tanh(q) # [-1. 1]
+            r = r.cpu().data.numpy()
             s2 = s2.cpu().data.numpy()
             #print(s2.shape, q.shape)
         self.d.train() # train=true
-        return s2, q
+        #self.d_target.train()
+        return s2, r
     
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
@@ -144,7 +147,9 @@ class Agent():
 
         # ----------------------- update target networks ----------------------- #
         self.soft_update(self.d, self.d_target, γ)
-        self.soft_update(self.g, self.g_target, γ)                     
+        self.soft_update(self.g, self.g_target, γ)
+        
+        return gloss, dloss
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
