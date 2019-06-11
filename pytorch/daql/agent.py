@@ -72,8 +72,8 @@ class Agent():
         with torch.no_grad():
             s2, q = self.d(s, a)
             #print(s2.shape, q.shape)
-            #r = torch.sigmoid(q) # [-1, 1]
-            r = torch.tanh(q) # [-1. 1]
+            r = torch.sigmoid(q) # [0, 1]
+            #r = torch.tanh(q) # [-1. 1]
             r = r.cpu().data.numpy()
             s2 = s2.cpu().data.numpy()
             #print(s2.shape, q.shape)
@@ -84,7 +84,7 @@ class Agent():
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample()
-            gloss, dloss = self.learn(E, γ)
+            gloss, dloss = self.learn(E, GAMMA)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
             return gloss, dloss
@@ -127,11 +127,11 @@ class Agent():
         
         # model-based part
         dA2 = self.g_target(dS2)
-        gA2 = self.g_target(gS2)
+        #gA2 = self.g_target(gS2)
         
-        # dloss += torch.sum((dS2 - S2)**2, dim=1).mean()
-        # gloss += torch.sum((gS2 - S2)**2, dim=1).mean()
-        # dloss += torch.sum((dA2 - A2)**2, dim=1).mean()
+        dloss += torch.sum((dS2 - S2)**2, dim=1).mean()
+        #gloss += torch.sum((gS2 - S2)**2, dim=1).mean()
+        dloss += torch.sum((dA2 - A2)**2, dim=1).mean()
         # gloss += torch.sum((gA2 - A2)**2, dim=1).mean()        
 
         # Minimize the loss
