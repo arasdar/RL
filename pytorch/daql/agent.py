@@ -82,13 +82,15 @@ class Agent():
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample()
-            gloss, dloss, dloss_S, dloss_Q = self.learn(E, GAMMA)
+            gloss, dloss, dloss_S, dloss_Q, rewards_mean, Q_mean = self.learn(E, GAMMA)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
             dloss_Q = dloss_Q.cpu().data.numpy()
             dloss_S = dloss_S.cpu().data.numpy()
-            return gloss, dloss, dloss_S, dloss_Q
-        else: return 0, 0, 0, 0
+            rewards_mean = rewards_mean.cpu().data.numpy()
+            Q_mean = Q_mean.cpu().data.numpy()
+            return gloss, dloss, dloss_S, dloss_Q, rewards_mean, Q_mean
+        else: return 0, 0, 0, 0, 0, 0
         
     def learn(self, E, γ):
         """Update G and D parameters using given batch of experience (e) tuples.
@@ -120,6 +122,8 @@ class Agent():
         #dloss += ((dS2 - S2)**2).mean()
         #dloss = F.mse_loss(Q, Q_target)
         dloss = dloss_Q #+ dloss_S
+        rewards_mean = rewards.mean() 
+        Q_mean = Q.mean()
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
@@ -152,7 +156,7 @@ class Agent():
         self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
         
-        return gloss, dloss, dloss_S, dloss_Q
+        return gloss, dloss, dloss_S, dloss_Q, rewards_mean, Q_mean
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
