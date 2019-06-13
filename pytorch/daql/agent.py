@@ -10,7 +10,6 @@ GAMMA = 0.99            # discount factor
 LR = 1e-3        # learning rate of the critic
 BATCH_SIZE = 1024         # minibatch size/ RAM size
 BUFFER_SIZE = int(1e6)  # replay buffer size
-# H_SIZE = 400
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -50,17 +49,15 @@ class Agent():
         self.memory.add(s, a, r, s2, done)
 
     def act(self, s):
-        """Returns an action (a) (as per current policy) for a given state (s) OR a predicted state (s_)."""
+        """Returns an action (a) for a given state (s) OR a predicted state (s_)."""
         s = torch.from_numpy(s).float().to(device)
         self.g.eval() # train=false
-        #self.g_target.eval() # train=false
         with torch.no_grad():
             a = self.g(s)
             #print(a.shape)
             a = a.cpu().data.numpy()#.reshape([1, -1])
             #print(a.shape)
         self.g.train() # train=true
-        #self.g_target.train()
         return a # tanh(a):[-1, 1]
 
     def env(self, s, a):
@@ -72,23 +69,26 @@ class Agent():
         with torch.no_grad():
             s2, q = self.d(s, a)
             #print(s2.shape, q.shape)
-            r = torch.sigmoid(q) # [0, 1]
-            #r = torch.tanh(q) # [-1. 1]
+            #r = torch.sigmoid(q) # [0, 1]
+            r = torch.tanh(q) # [-1. 1]
+            q = q.cpu().data.numpy()
             r = r.cpu().data.numpy()
             s2 = s2.cpu().data.numpy()
             #print(s2.shape, q.shape)
         self.d.train() # train=true
         #self.d_target.train()
-        return s2, r
+        return s2, q, r
     
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample()
-            gloss, dloss = self.learn(E, GAMMA)
+            gloss, dloss, dloss_S, dloss_Q = self.learn(E, GAMMA)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
-            return gloss, dloss
-        else: return 0, 0
+            dloss_Q = dloss_Q.cpu().data.numpy()
+            dloss_S = dloss_S.cpu().data.numpy()
+            return gloss, dloss, dloss_S, dloss_Q
+        else: return 0, 0, 0, 0
         
     def learn(self, E, γ):
         """Update G and D parameters using given batch of experience (e) tuples.
@@ -103,7 +103,7 @@ class Agent():
         ======
             E           (Tuple[torch.Tensor]): tuple of (S     , A      , rewards, S2         , dones) 
             experiences (Tuple[torch.Tensor]): tuple of (states, actions, rewards, next_states, dones)
-            gamma (float): discount factor
+            γ (float): discount factor/ gamma
         """
         S, A, rewards, S2, dones = E # E: expriences, e: exprience
 
@@ -115,30 +115,33 @@ class Agent():
         Q = rewards + (γ * Q2 * (1 - dones))
         # Compute dloss
         dS2, dQ = self.d(S, A)
-        dloss = ((dQ - Q)**2).mean()
+        dloss_Q = ((dQ - Q)**2).mean()
+        dloss_S = torch.sum((dS2 - S2)**2, dim=1).mean()
         #dloss += ((dS2 - S2)**2).mean()
         #dloss = F.mse_loss(Q, Q_target)
+        dloss = dloss_Q #+ dloss_S
         
-        # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # Compute gloss
-        gA = self.g(S)
-        gS2, gQ = self.d(S, gA)
-        gloss = -gQ.mean()
-        
-        # model-based part
-        dA2 = self.g_target(dS2)
-        #gA2 = self.g_target(gS2)
-        
-        dloss += torch.sum((dS2 - S2)**2, dim=1).mean()
-        #gloss += torch.sum((gS2 - S2)**2, dim=1).mean()
-        dloss += torch.sum((dA2 - A2)**2, dim=1).mean()
-        # gloss += torch.sum((gA2 - A2)**2, dim=1).mean()        
-
         # Minimize the loss
         self.d_optimizer.zero_grad()
         dloss.backward()
         #torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
         self.d_optimizer.step()
+        
+        # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
+        # Compute gloss
+        gA = self.g(S)
+        _, gQ = self.d(S, gA)
+        gloss = -gQ.mean()
+        
+        # model-based part
+        #dA2 = self.g_target(dS2)
+        #gA2 = self.g_target(gS2)
+        
+        #dloss += torch.sum((dS2 - S2)**2, dim=1).mean()
+        #gloss += torch.sum((gS2 - S2)**2, dim=1).mean()
+        #dloss += torch.sum((dA2 - A2)**2, dim=1).mean()
+        # gloss += torch.sum((gA2 - A2)**2, dim=1).mean()        
+
 
         # Minimize the loss
         self.g_optimizer.zero_grad()
@@ -149,7 +152,7 @@ class Agent():
         self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
         
-        return gloss, dloss
+        return gloss, dloss, dloss_S, dloss_Q
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.

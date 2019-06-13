@@ -25,7 +25,7 @@ class Memory:
         self.random_seed = random.seed(random_seed)
     
     def add(self, s, a, r, s2, done):
-        """Add a new experience to memory."""
+        """Add a new experience (e) to memory."""
         e = self.e(s, a, r, s2, done)
         self.buffer.append(e)
     
