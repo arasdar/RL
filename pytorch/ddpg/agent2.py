@@ -95,7 +95,7 @@ class Agent():
         dS2, dQ = self.d(S, A)
         dloss_Q = ((dQ - Q)**2).mean()
         dloss_S = torch.sum((dS2 - S2)**2, dim=1).mean()
-        dloss = dloss_Q + dloss_S
+        dloss = dloss_Q #+ dloss_S
         #dloss = F.mse_loss(dQ, Q)
         
         # Minimize the loss
