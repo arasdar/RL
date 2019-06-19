@@ -74,11 +74,6 @@ class Agent():
         #self.g_target.eval() # test/validation/inference
         with torch.no_grad():
             s2 = self.g(s, a)
-            #print(s2.shape, q.shape)
-            #r = torch.sigmoid(q) # [0, 1]
-            # r = torch.tanh(q) # [-1. 1]
-            # q = q.cpu().data.numpy()
-            # r = r.cpu().data.numpy()
             # s2 = s2.cpu().data.numpy()
             s2 = s2.numpy()
             #print(s2.shape, q.shape)
@@ -136,16 +131,7 @@ class Agent():
         _, gQ2 = self.d(gS2)
         gQ = rewards + (γ * gQ2 * (1 - dones))
         gloss = -gQ.mean()
-        
-        # model-based part
-        #dA2 = self.g_target(dS2)
-        #gA2 = self.g_target(gS2)
-        
-        #dloss += torch.sum((dS2 - S2)**2, dim=1).mean()
-        #gloss += torch.sum((gS2 - S2)**2, dim=1).mean()
-        #dloss += torch.sum((dA2 - A2)**2, dim=1).mean()
         # gloss += torch.sum((gA2 - A2)**2, dim=1).mean()        
-
 
         # Minimize the loss
         self.g_optimizer.zero_grad()
@@ -156,7 +142,7 @@ class Agent():
         self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
         
-        return gloss, dloss, dloss_S, dloss_Q, rewards_mean, Q_mean
+        return gloss, dloss
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
