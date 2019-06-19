@@ -55,7 +55,7 @@ class Agent():
         self.d.eval() # train=false
         with torch.no_grad():
             a, q = self.d(s)
-            a = torch.tanh(a) #[-1, 1]
+            #a = torch.tanh(a) #[-1, 1]
             #print(a.shape)
             #a = a.cpu().data.numpy()#.reshape([1, -1])
             a = a.numpy()
@@ -93,12 +93,6 @@ class Agent():
     def learn(self, E, γ):
         """Update G and D parameters using given batch of experience (e) tuples.
         γ = gamma
-        A2 = g_target(S2)
-        Q = rewards + γ * d_target(S2, A2)
-        where:
-            g_target(S) -> A-actions & S-states
-            d_target(S, A) -> Q-values
-
         Params
         ======
             E           (Tuple[torch.Tensor]): tuple of (S     , A      , rewards, S2         , dones) 
@@ -113,14 +107,19 @@ class Agent():
         _, dQ = self.d(S)
         dloss = ((dQ - Q)**2).mean()
         
-        S2_ = self.g_target(S, A)
-        _, Q2_ = self.d_target(S2_)
-        Q_ = rewards + (γ * Q2_ * (1 - dones))
+        #_, Q2 = self.d_target(S2)
+        #Q = rewards + (γ * Q2 * (1 - dones))
         _, dQ2 = self.d(S2)
-        dQ_ = rewards + (γ * dQ2 * (1 - dones))
-        dloss += ((dQ_ - Q_)**2).mean()
+        dloss += ((dQ2 - Q2)**2).mean()
         
-        # Minimize the loss
+        #         S2_ = self.g_target(S, A)
+        #         _, Q2_ = self.d_target(S2_)
+        #         Q_ = rewards + (γ * Q2_ * (1 - dones))
+        #         _, dQ2 = self.d(S2)
+        #         dQ_ = rewards + (γ * dQ2 * (1 - dones))
+        #         dloss += ((dQ_ - Q_)**2).mean()
+        
+        # Minimize dloss
         self.d_optimizer.zero_grad()
         dloss.backward()
         #torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
@@ -129,11 +128,11 @@ class Agent():
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         gS2 = self.g(S, A)
         _, gQ2 = self.d(gS2)
-        gQ = rewards + (γ * gQ2 * (1 - dones))
-        gloss = -gQ.mean()
+        #gQ = rewards + (γ * gQ2 * (1 - dones))
+        gloss = -gQ2.mean()
         # gloss += torch.sum((gA2 - A2)**2, dim=1).mean()        
 
-        # Minimize the loss
+        # Minimize gloss
         self.g_optimizer.zero_grad()
         gloss.backward()
         self.g_optimizer.step()
