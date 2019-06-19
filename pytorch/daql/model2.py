@@ -16,7 +16,7 @@ class D(nn.Module):
             random_seed (int): Random seed
             h_size (int): Number of nodes in first hidden layer
         """
-        super(G, self).__init__()
+        super(D, self).__init__()
         
         self.random_seed = torch.manual_seed(random_seed)
         
@@ -27,7 +27,7 @@ class D(nn.Module):
         self.bn2 = nn.BatchNorm1d(h_size)
         
         self.fc3 = nn.Linear(h_size, a_size)
-        self.fc4 = nn.Linear(h_size, 1)
+        self.fc4 = nn.Linear(a_size, 1)
         
         self.init_parameters()
 
@@ -65,7 +65,7 @@ class G(nn.Module):
             h_size (int): Number of nodes in first hidden layer
             h_size (int): Number of nodes in second hidden layer
         """
-        super(D, self).__init__()
+        super(G, self).__init__()
         
         self.random_seed = torch.manual_seed(random_seed)
         
