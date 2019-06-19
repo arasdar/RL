@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class G(nn.Module):
-    """Action generator or actor (policy) Model."""
+class D(nn.Module):
+    """D: Discriminator/Classifier and Actor/Critic (policy/value) Model."""
 
     def __init__(self, s_size, a_size, random_seed, h_size=400):
         """Initialize parameters and build model.
@@ -27,6 +27,7 @@ class G(nn.Module):
         self.bn2 = nn.BatchNorm1d(h_size)
         
         self.fc3 = nn.Linear(h_size, a_size)
+        self.fc4 = nn.Linear(h_size, 1)
         
         self.init_parameters()
 
@@ -34,19 +35,24 @@ class G(nn.Module):
         self.fc1.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        self.fc4.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        
+        # how to freeze the last layer Q-value
+        self.fc4.weight.requires_grad = False
+        self.fc4.bias.requires_grad = False
         
     def forward(self, S):
-        """Build an actor (policy) network that maps states (S) and pred_states (S_) -> actions (A)."""
-        """Build a generator network that maps state (s) and pred_state (s_) -> action (a)."""
         H = F.leaky_relu(self.bn1(self.fc1(S))) # H: hiddden layer/output
         
         H = F.leaky_relu(self.bn2(self.fc2(H))) # H: hidden layer/ output
-        #H = F.leaky_relu(self.fc2(H)) # H: hidden layer/ output
         
-        return torch.tanh(self.fc3(H)) # [-1, +1]
+        A = torch.tanh(self.fc3(H)) # has to be within [-1, +1]
+        Q = self.fc4(A)
+        
+        return A, Q
 
 
-class D(nn.Module):
+class G(nn.Module):
     """Decoder (next/final state predictor) & Discriminator (Value/evaluator/critic/examiner/final state predictor) Model."""
 
     def __init__(self, s_size, a_size, random_seed, h_size=400):
