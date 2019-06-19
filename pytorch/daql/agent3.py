@@ -112,28 +112,17 @@ class Agent():
         """
         S, A, rewards, S2, dones = E # E: expriences, e: exprience
 
-        # ---------------------------- update D: next state and final state predictor --------------- #
-        # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
-        # ---------------------------- update D: Discriminator (critic) & Decoder (predictor) ---------------------------- #
-        #A2 = self.g_target(S2)
+        # ---------------------------- update D: Discriminator & Actor/Critic --------------- #
         _, Q2 = self.d_target(S2)
         Q = rewards + (γ * Q2 * (1 - dones))
-        # Compute dloss
         _, dQ = self.d(S)
         dloss = ((dQ - Q)**2).mean()
-        #dloss_S = torch.sum((dS2 - S2)**2, dim=1).mean()
-        #dloss += ((dS2 - S2)**2).mean()
-        #dloss = F.mse_loss(Q, Q_target)
-        #dloss = dloss_Q #+ dloss_S
-        #rewards_mean = rewards.mean() 
-        #Q_mean = Q.mean()
         
         S2_ = self.g_target(S, A)
         _, Q2_ = self.d_target(S2_)
         Q_ = rewards + (γ * Q2_ * (1 - dones))
-        # Compute dloss
-        _, dQ2_ = self.d(S2)
-        dQ_ = rewards + (γ * dQ2_ * (1 - dones))
+        _, dQ2 = self.d(S2)
+        dQ_ = rewards + (γ * dQ2 * (1 - dones))
         dloss += ((dQ_ - Q_)**2).mean()
         
         # Minimize the loss
@@ -143,9 +132,9 @@ class Agent():
         self.d_optimizer.step()
         
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # Compute gloss
-        gA = self.g(S)
-        _, gQ = self.d(S, gA)
+        gS2 = self.g(S, A)
+        _, gQ2 = self.d(gS2)
+        gQ = rewards + (γ * gQ2 * (1 - dones))
         gloss = -gQ.mean()
         
         # model-based part
