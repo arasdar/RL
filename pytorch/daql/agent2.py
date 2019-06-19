@@ -1,5 +1,5 @@
 from memory import Memory
-from model import G, D
+from model2 import G, D
 import random
 
 import torch
@@ -54,32 +54,29 @@ class Agent():
         s = torch.from_numpy(s).float().to(device)
         self.d.eval() # train=false
         with torch.no_grad():
-            a, q = self.d(s)
-            #a = torch.tanh(a) #[-1, 1]
-            #print(a.shape)
-            #a = a.cpu().data.numpy()#.reshape([1, -1])
-            a = a.numpy()
-            q = q.numpy()
+            a, _ = self.d(s)
+            a = a.cpu().data.numpy()
+            #q = q.cpu().data.numpy()
             #print(a.shape)
         self.d.train() # train=true
-        return a, q
+        return a
 
-    # Adv/auto encoder/decoder using generator/generative model/ predictive model/ predict the next state of env
-    # Model-based or based on the env model
-    def env(self, s, a):
-        """Requires an action (a) and a given state (s) for predicting next state (s2_)."""
-        s = torch.from_numpy(s).float().to(device)
-        a = torch.from_numpy(a).float().to(device)
-        self.g.eval() # train=false
-        #self.g_target.eval() # test/validation/inference
-        with torch.no_grad():
-            s2 = self.g(s, a)
-            # s2 = s2.cpu().data.numpy()
-            s2 = s2.numpy()
-            #print(s2.shape, q.shape)
-        self.g.train() # train=true
-        #self.d_target.train()
-        return s2
+#     # Adv/auto encoder/decoder using generator/generative model/ predictive model/ predict the next state of env
+#     # Model-based or based on the env model
+#     def env(self, s, a):
+#         """Requires an action (a) and a given state (s) for predicting next state (s2_)."""
+#         s = torch.from_numpy(s).float().to(device)
+#         a = torch.from_numpy(a).float().to(device)
+#         self.g.eval() # train=false
+#         #self.g_target.eval() # test/validation/inference
+#         with torch.no_grad():
+#             s2 = self.g(s, a)
+#             # s2 = s2.cpu().data.numpy()
+#             s2 = s2.numpy()
+#             #print(s2.shape, q.shape)
+#         self.g.train() # train=true
+#         #self.d_target.train()
+#         return s2
     
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
@@ -104,13 +101,13 @@ class Agent():
         # ---------------------------- update D: Discriminator & Actor/Critic --------------- #
         _, Q2 = self.d_target(S2)
         Q = rewards + (γ * Q2 * (1 - dones))
+        
         _, dQ = self.d(S)
         dloss = ((dQ - Q)**2).mean()
         
-        #_, Q2 = self.d_target(S2)
-        #Q = rewards + (γ * Q2 * (1 - dones))
         _, dQ2 = self.d(S2)
-        dloss += ((dQ2 - Q2)**2).mean()
+        dQ_ = rewards + (γ * dQ2 * (1 - dones))
+        dloss = ((dQ_ - Q)**2).mean()
         
         #         S2_ = self.g_target(S, A)
         #         _, Q2_ = self.d_target(S2_)
@@ -128,8 +125,8 @@ class Agent():
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         gS2 = self.g(S, A)
         _, gQ2 = self.d(gS2)
-        #gQ = rewards + (γ * gQ2 * (1 - dones))
-        gloss = -gQ2.mean()
+        gQ = rewards + (γ * gQ2 * (1 - dones))
+        gloss = -gQ.mean()
         # gloss += torch.sum((gA2 - A2)**2, dim=1).mean()        
 
         # Minimize gloss
