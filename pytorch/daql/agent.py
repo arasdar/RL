@@ -85,19 +85,42 @@ class Agent():
         S, A, rewards, S2, dones = E
 
         # ---------------------------- update D: Discriminator & Actor/Critic --------------- #
+        # Compute dloss for model-free: Q-learning
+        _, dQ = self.d(S)
         _, Q2 = self.d_target(S2)
         Q = rewards + (γ * Q2 * (1 - dones))
-        
-        # Compute dloss for model-free
-        _, dQ = self.d(S)
         dloss = ((dQ - Q)**2).mean()
         
         # Compute dloss for model-based        
         _, dQ2 = self.d(S2)
-        dQ_ = rewards + (γ * dQ2 * (1 - dones))
-        dloss += ((dQ_ - Q)**2).mean()
-        #dloss = F.mse_loss(dQ, Q)
+        dQ = rewards + (γ * dQ2 * (1 - dones))
+        dloss += ((dQ - Q)**2).mean()
         
+        #dloss = F.mse_loss(dQ, Q)
+        # # another loss
+        # _, Q = self.d_target(S)
+        # dloss += ((dQ - Q)**2).mean()
+        
+        # # Compute dloss for model-based        
+        # _, dQ2 = self.d(S2)
+        # dQ_ = rewards + (γ * dQ2 * (1 - dones))
+        # dloss += ((dQ_ - Q)**2).mean()
+        
+        # # Compute dloss for model-free: Q-learning
+        # gS2 = self.g_target(S, A)
+        # _, gQ2 = self.d_target(gS2)
+        # _, dQ = self.d(S)
+        # gQ = rewards + (γ * gQ2 * (1 - dones))
+        # dloss = ((dQ - gQ)**2).mean()
+        
+        # Compute dloss for model-based: adversarial learning (autoencoder)
+        gS2 = self.g(S, A)
+        _, gQ2 = self.d(gS2)
+        _, dQ2 = self.d(S2)
+        gQ = rewards + (γ * gQ2 * (1 - dones))
+        dQ = rewards + (γ * dQ2 * (1 - dones))
+        dloss += ((dQ - gQ)**2).mean()
+
         # Minimize the loss
         self.d_optimizer.zero_grad()
         dloss.backward()
@@ -105,7 +128,7 @@ class Agent():
         self.d_optimizer.step()
 
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # Compute gloss
+        # # Compute gloss
         gS2 = self.g(S, A)
         _, gQ2 = self.d(gS2)
         gQ = rewards + (γ * gQ2 * (1 - dones))
