@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-GAMMA = 0.99            # discount factor 
+GAMMA = 0.99            # discount factor
 LR = 1e-3        # learning rate of the critic
 BATCH_SIZE = 1024         # minibatch size/ RAM size
 BUFFER_SIZE = int(1e6)  # replay buffer size
@@ -42,111 +42,75 @@ class Agent():
         # ReplayBuffer/ Memory
         self.memory = Memory(a_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
     
-    #def step(self, state, action, reward, next_state, done):
+    #def step(self, state, action, reward, next_state, done/terminal):
     def step(self, s, a, r, s2, done):
         """Save experience (e) in replay memory, and use random sample from buffer to learn."""
-        # Save experience (e)
+        # Save experience (e) / reward (r)
         self.memory.add(s, a, r, s2, done)
 
     def act(self, s):
-        """Returns an action (a) for a given state (s) OR a predicted state (s_)."""
+        """Returns an action (a) (as current policy) for a given state (s)."""
         s = torch.from_numpy(s).float().to(device)
-        self.g.eval() # train=false
+        self.d.eval() # validation/test/inference
         with torch.no_grad():
-            a = self.g(s)
-            #print(a.shape)
-            a = a.cpu().data.numpy()#.reshape([1, -1])
-            #print(a.shape)
-        self.g.train() # train=true
+            a, _ = self.d(s)
+            a = a.cpu().data.numpy()
+        self.d.train() # train
         return a # tanh(a):[-1, 1]
 
-    def env(self, s, a):
-        """Requires an action (a) and a given state (s) for predicting next state (s2_) and total future rewards (q_)."""
-        s = torch.from_numpy(s).float().to(device)
-        a = torch.from_numpy(a).float().to(device)
-        self.d.eval() # train=false
-        #self.d_target.eval() # test/validation/inference
-        with torch.no_grad():
-            s2, q = self.d(s, a)
-            #print(s2.shape, q.shape)
-            #r = torch.sigmoid(q) # [0, 1]
-            r = torch.tanh(q) # [-1. 1]
-            q = q.cpu().data.numpy()
-            r = r.cpu().data.numpy()
-            s2 = s2.cpu().data.numpy()
-            #print(s2.shape, q.shape)
-        self.d.train() # train=true
-        #self.d_target.train()
-        return s2, q, r
-    
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
-            E = self.memory.sample()
-            gloss, dloss, dloss_S, dloss_Q, rewards_mean, Q_mean = self.learn(E, GAMMA)
+            E = self.memory.sample() # E: expriences
+            dloss, gloss = self.learn(E, GAMMA)
+            #print(dloss, gloss)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
-            dloss_Q = dloss_Q.cpu().data.numpy()
-            dloss_S = dloss_S.cpu().data.numpy()
-            rewards_mean = rewards_mean.cpu().data.numpy()
-            Q_mean = Q_mean.cpu().data.numpy()
-            return gloss, dloss, dloss_S, dloss_Q, rewards_mean, Q_mean
-        else: return 0, 0, 0, 0, 0, 0
+            #print(dloss, gloss)
+            return dloss, gloss
+        else: return 0, 0
         
-    def learn(self, E, γ):
+    def learn(self, E, γ): # γ: gamma
         """Update G and D parameters using given batch of experience (e) tuples.
-        γ = gamma
-        A2 = g_target(S2)
-        Q = rewards + γ * d_target(S2, A2)
+        Q_target = rewards + γ * d_target(S2, g_target(S2))
         where:
-            g_target(S) -> A-actions & S-states
-            d_target(S, A) -> Q-values
+            d_target(S) -> A-actions and Q-values
+            g_target(S, A) -> S2_: precited next states
 
         Params
         ======
-            E           (Tuple[torch.Tensor]): tuple of (S     , A      , rewards, S2         , dones) 
-            experiences (Tuple[torch.Tensor]): tuple of (states, actions, rewards, next_states, dones)
-            γ (float): discount factor/ gamma
+            experiences (Tuple[torch.Tensor]): tuple of (states, actions, rewards, next_states, dones) 
+            E           (Tuple[torch.Tensor]): tuple of (   S  ,    A   , rewards,    S2      , dones) 
+            γ (float): discount factor or gamma
         """
-        S, A, rewards, S2, dones = E # E: expriences, e: exprience
+        S, A, rewards, S2, dones = E
 
-        # ---------------------------- update D: next state and final state predictor --------------- #
-        # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
-        # ---------------------------- update D: Discriminator (critic) & Decoder (predictor) ---------------------------- #
-        A2 = self.g_target(S2)
-        _, Q2 = self.d_target(S2, A2) # S3_
+        # ---------------------------- update D: Discriminator & Actor/Critic --------------- #
+        _, Q2 = self.d_target(S2)
         Q = rewards + (γ * Q2 * (1 - dones))
-        # Compute dloss
-        dS2, dQ = self.d(S, A)
-        dloss_Q = ((dQ - Q)**2).mean()
-        dloss_S = torch.sum((dS2 - S2)**2, dim=1).mean()
-        #dloss += ((dS2 - S2)**2).mean()
-        #dloss = F.mse_loss(Q, Q_target)
-        dloss = dloss_Q #+ dloss_S
-        rewards_mean = rewards.mean() 
-        Q_mean = Q.mean()
+        
+        # Compute dloss for model-free
+        _, dQ = self.d(S)
+        dloss = ((dQ - Q)**2).mean()
+        
+        # Compute dloss for model-based        
+        _, dQ2 = self.d(S2)
+        dQ_ = rewards + (γ * dQ2 * (1 - dones))
+        dloss += ((dQ_ - Q)**2).mean()
+        #dloss = F.mse_loss(dQ, Q)
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
         dloss.backward()
         #torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
         self.d_optimizer.step()
-        
+
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         # Compute gloss
-        gA = self.g(S)
-        _, gQ = self.d(S, gA)
+        gS2 = self.g(S, A)
+        _, gQ2 = self.d(gS2)
+        gQ = rewards + (γ * gQ2 * (1 - dones))
         gloss = -gQ.mean()
         
-        # model-based part
-        #dA2 = self.g_target(dS2)
-        #gA2 = self.g_target(gS2)
-        
-        #dloss += torch.sum((dS2 - S2)**2, dim=1).mean()
-        #gloss += torch.sum((gS2 - S2)**2, dim=1).mean()
-        #dloss += torch.sum((dA2 - A2)**2, dim=1).mean()
-        # gloss += torch.sum((gA2 - A2)**2, dim=1).mean()        
-
-
         # Minimize the loss
         self.g_optimizer.zero_grad()
         gloss.backward()
@@ -156,17 +120,18 @@ class Agent():
         self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
         
-        return gloss, dloss, dloss_S, dloss_Q, rewards_mean, Q_mean
+        return dloss, gloss
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
+        γ: GAMMA ~ 0.9999
         θ_target = (1-γ)*θ_local + γ*θ_target
 
         Params
         ======
             local_model: PyTorch model (weights will be copied from)
             target_model: PyTorch model (weights will be copied to)
-            γ (float): interpolation parameter 
+            gamma (float): interpolation parameter 
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(((1-γ)*local_param.data) + (γ*target_param.data))
