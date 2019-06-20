@@ -111,7 +111,6 @@ class Agent():
         # gQ = rewards + (γ * gQ2 * (1 - dones))
         # dloss = ((dQ - gQ)**2).mean()
         
-        # Compute dloss for model-based        
         # Compute dloss for model-based: adversarial learning (autoencoder)
         gS2 = self.g(S, A)
         _, gQ2 = self.d(gS2)
