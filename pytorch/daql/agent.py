@@ -85,26 +85,24 @@ class Agent():
         S, A, rewards, S2, dones = E
 
         # ---------------------------- update D: Discriminator & Actor/Critic --------------- #
-        # Compute dloss for model-free: Q-learning
-        _, dQ = self.d(S)
+        # Compute Q_target
         _, Q2 = self.d_target(S2)
         Q = rewards + (γ * Q2 * (1 - dones))
+        
+        # Compute dloss for model-free: Q-learning
+        _, dQ = self.d(S)
         dloss = ((dQ - Q)**2).mean()
         
-        # Compute dloss for model-based        
+        # Compute dloss for model-free: Q-learning
         _, dQ2 = self.d(S2)
         dQ = rewards + (γ * dQ2 * (1 - dones))
         dloss += ((dQ - Q)**2).mean()
-        
         #dloss = F.mse_loss(dQ, Q)
+        
         # # another loss
+        # _, dQ = self.d(S)
         # _, Q = self.d_target(S)
         # dloss += ((dQ - Q)**2).mean()
-        
-        # # Compute dloss for model-based        
-        # _, dQ2 = self.d(S2)
-        # dQ_ = rewards + (γ * dQ2 * (1 - dones))
-        # dloss += ((dQ_ - Q)**2).mean()
         
         # # Compute dloss for model-free: Q-learning
         # gS2 = self.g_target(S, A)
@@ -113,6 +111,7 @@ class Agent():
         # gQ = rewards + (γ * gQ2 * (1 - dones))
         # dloss = ((dQ - gQ)**2).mean()
         
+        # Compute dloss for model-based        
         # Compute dloss for model-based: adversarial learning (autoencoder)
         gS2 = self.g(S, A)
         _, gQ2 = self.d(gS2)
