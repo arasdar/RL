@@ -93,11 +93,11 @@ class Agent():
         _, dQ = self.d(S)
         dloss = ((dQ - Q)**2).mean()
         
-        # Compute dloss for model-free: Q-learning
-        _, dQ2 = self.d(S2)
-        dQ = rewards + (γ * dQ2 * (1 - dones))
-        dloss += ((dQ - Q)**2).mean()
-        #dloss = F.mse_loss(dQ, Q)
+        # # Compute dloss for model-free: Q-learning
+        # _, dQ2 = self.d(S2)
+        # dQ = rewards + (γ * dQ2 * (1 - dones))
+        # dloss += ((dQ - Q)**2).mean()
+        # #dloss = F.mse_loss(dQ, Q)
         
         # # another loss
         # _, dQ = self.d(S)
@@ -111,13 +111,13 @@ class Agent():
         # gQ = rewards + (γ * gQ2 * (1 - dones))
         # dloss = ((dQ - gQ)**2).mean()
         
-        # Compute dloss for model-based: adversarial learning (autoencoder)
-        gS2 = self.g(S, A)
-        _, gQ2 = self.d(gS2)
-        _, dQ2 = self.d(S2)
-        gQ = rewards + (γ * gQ2 * (1 - dones))
-        dQ = rewards + (γ * dQ2 * (1 - dones))
-        dloss += ((dQ - gQ)**2).mean()
+        # # Compute dloss for model-based: adversarial learning (autoencoder)
+        # gS2 = self.g(S, A)
+        # _, gQ2 = self.d(gS2)
+        # _, dQ2 = self.d(S2)
+        # gQ = rewards + (γ * gQ2 * (1 - dones))
+        # dQ = rewards + (γ * dQ2 * (1 - dones))
+        # dloss += ((dQ - gQ)**2).mean()
 
         # Minimize the loss
         self.d_optimizer.zero_grad()
