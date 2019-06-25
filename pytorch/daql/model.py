@@ -41,9 +41,10 @@ class D(nn.Module):
         
         H = F.leaky_relu(self.bn1(self.fc1(S))) # H: hiddden layer/output
         
-        A = torch.tanh(self.fc2(H)) # [-1, +1]
+        H = self.fc2(H)
         
-        Q = self.fc3(A)
+        A = torch.tanh(H) # [-1, +1]
+        Q = self.fc3(H)
 
         return A, Q
 

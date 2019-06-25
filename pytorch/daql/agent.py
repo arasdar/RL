@@ -58,6 +58,17 @@ class Agent():
         self.d.train() # train
         return a # tanh(a):[-1, 1]
 
+    def env(self, s, a):
+        """Predicts next state (s2) given current state (s) and action (a)."""
+        s = torch.from_numpy(s).float().to(device)
+        a = torch.from_numpy(a).float().to(device)
+        self.g.eval() # validation/test/inference
+        with torch.no_grad():
+            s2 = self.g(s, a)
+            s2 = s2.cpu().data.numpy()
+        self.g.train() # train
+        return s2 # tanh(a):[-1, 1]
+    
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample() # E: expriences
@@ -88,37 +99,9 @@ class Agent():
         # Compute Q_target
         _, Q2 = self.d_target(S2)
         Q = rewards + (γ * Q2 * (1 - dones))
-        
-        # Compute dloss for model-free: Q-learning
         _, dQ = self.d(S)
         dloss = ((dQ - Q)**2).mean()
         
-        # # Compute dloss for model-free: Q-learning
-        # _, dQ2 = self.d(S2)
-        # dQ = rewards + (γ * dQ2 * (1 - dones))
-        # dloss += ((dQ - Q)**2).mean()
-        # #dloss = F.mse_loss(dQ, Q)
-        
-        # # another loss
-        # _, dQ = self.d(S)
-        # _, Q = self.d_target(S)
-        # dloss += ((dQ - Q)**2).mean()
-        
-        # # Compute dloss for model-free: Q-learning
-        # gS2 = self.g_target(S, A)
-        # _, gQ2 = self.d_target(gS2)
-        # _, dQ = self.d(S)
-        # gQ = rewards + (γ * gQ2 * (1 - dones))
-        # dloss = ((dQ - gQ)**2).mean()
-        
-        # # Compute dloss for model-based: adversarial learning (autoencoder)
-        # gS2 = self.g(S, A)
-        # _, gQ2 = self.d(gS2)
-        # _, dQ2 = self.d(S2)
-        # gQ = rewards + (γ * gQ2 * (1 - dones))
-        # dQ = rewards + (γ * dQ2 * (1 - dones))
-        # dloss += ((dQ - gQ)**2).mean()
-
         # Minimize the loss
         self.d_optimizer.zero_grad()
         dloss.backward()
@@ -127,10 +110,8 @@ class Agent():
 
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         # # Compute gloss
-        gS2 = self.g(S, A)
-        _, gQ2 = self.d(gS2)
-        gQ = rewards + (γ * gQ2 * (1 - dones))
-        gloss = -gQ.mean()
+        S2_ = self.g(S, A)
+        gloss = torch.sum((S2_-S2)**2, dim=1).mean()
         
         # Minimize the loss
         self.g_optimizer.zero_grad()
