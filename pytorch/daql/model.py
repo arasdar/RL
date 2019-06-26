@@ -25,17 +25,17 @@ class D(nn.Module):
         self.bn1 = nn.BatchNorm1d(h_size)
         
         self.fc2 = nn.Linear(h_size, a_size)
-        self.fc3 = nn.Linear(a_size, 1)
+        #self.fc3 = nn.Linear(a_size, 1)
         
         self.init_parameters()
 
     def init_parameters(self):
         self.fc1.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
-        self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
+        #self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         
-        self.fc3.weight.require_grad = False
-        self.fc3.bias.require_grad = False
+        #self.fc3.weight.require_grad = False
+        #self.fc3.bias.require_grad = False
         
     def forward(self, S):
         
@@ -43,10 +43,10 @@ class D(nn.Module):
         
         H = self.fc2(H)
         
-        A = torch.tanh(H) # [-1, +1]
-        Q = self.fc3(H)
+        #A = torch.tanh(H) # [-1, +1]
+        #Q = self.fc3(H)
 
-        return A, Q
+        return torch.tanh(H)
 
 class G(nn.Module):
     """Autoencoder (next/final state predictor) Generator/Generative Model."""

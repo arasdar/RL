@@ -53,7 +53,7 @@ class Agent():
         s = torch.from_numpy(s).float().to(device)
         self.d.eval() # validation/test/inference
         with torch.no_grad():
-            a, _ = self.d(s)
+            a = self.d(s)
             a = a.cpu().data.numpy()
         self.d.train() # train
         return a # tanh(a):[-1, 1]
@@ -95,28 +95,37 @@ class Agent():
         """
         S, A, rewards, S2, dones = E
 
+        # ---------------------------- update G: Generator/Autoencoder/AdvEncoder ---------------------------- #
+        # Compute Q_target
+        A2 = self.d_target(S2)
+        S3_ = self.g_target(S2, A2)
+        S3_ *= γ *(1 - dones)
+        #Q = rewards + (γ * Q2 * (1 - dones))
+        S2_ = self.g(S, A)
+        rewards_ = (torch.sum((S2_-S3_)**2, dim=1))**0.5
+        gloss = ((rewards_ - rewards)**2).mean()
+        gloss += torch.sum((S2_-S2)**2, dim=1).mean()
+        
+        # Minimize the loss
+        self.g_optimizer.zero_grad()
+        gloss.backward()
+        self.g_optimizer.step()
+        
         # ---------------------------- update D: Discriminator & Actor/Critic --------------- #
         # Compute Q_target
-        _, Q2 = self.d_target(S2)
-        Q = rewards + (γ * Q2 * (1 - dones))
-        _, dQ = self.d(S)
-        dloss = ((dQ - Q)**2).mean()
+        A2 = self.d(S2)
+        S3_ = self.g(S2, A2)
+        S3_ *= γ *(1 - dones)
+        #Q = rewards + (γ * Q2 * (1 - dones))
+        S2_ = self.g(S, A)
+        rewards_ = (torch.sum((S2_-S3_)**2, dim=1))**0.5
+        dloss = -((rewards_ - rewards)**2).mean()
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
         dloss.backward()
         #torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
         self.d_optimizer.step()
-
-        # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # # Compute gloss
-        S2_ = self.g(S, A)
-        gloss = torch.sum((S2_-S2)**2, dim=1).mean()
-        
-        # Minimize the loss
-        self.g_optimizer.zero_grad()
-        gloss.backward()
-        self.g_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
         self.soft_update(self.d, self.d_target, γ)
