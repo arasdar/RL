@@ -65,7 +65,7 @@ class D(nn.Module):
         self.bn1 = nn.BatchNorm1d(h_size)
         self.bn2 = nn.BatchNorm1d(h_size)
         
-        self.fc3 = nn.Linear(h_size, 1)
+        self.fc3 = nn.Linear(h_size, s_size)
         
         self.init_parameters()
 
@@ -73,7 +73,6 @@ class D(nn.Module):
         self.fc1.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc2.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
-
         
     def forward(self, S, A):
         """Build a Descriminator/Decoder (predictor) network that maps (states, actions) pairs -> values."""

@@ -19,7 +19,7 @@ class Memory:
         self.a_size = a_size
         self.buffer = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size
-        #self.experience = namedtuple("exprience", field_names=["state", "action", "reward", "next_state", "done/terminal"])
+        #self.experience = namedtuple("exprience", field_names=["state", "action", "reward", "next_state", "done"])
         self.e = namedtuple("e", field_names=["s", "a", "r", "s2", "done"])
         self.random_seed = random.seed(random_seed)
     

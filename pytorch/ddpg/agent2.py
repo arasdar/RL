@@ -85,12 +85,15 @@ class Agent():
 
         # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
         A2 = self.g_target(S2)
-        Q2 = self.d_target(S2, A2)
-        Q = rewards + (γ * Q2 * (1 - dones))
+        S3_ = self.d_target(S2, A2)
+        #Q = rewards + (γ * Q2 * (1 - dones))
+        S3_ *= (1 - dones)
         
         # Compute dloss
-        Q_ = self.d(S, A)
-        dloss = torch.sum((Q_ - Q)**2, dim=1).mean()
+        S2_ = self.d(S, A)
+        dist = torch.sum((S2_ - S3_)**2, dim=1)**.5 # [0, inf]
+        rewards_ = torch.exp(-dist) # [0, 1]
+        dloss = -(torch.log((rewards_ - rewards)**2)/2).mean() # [0, inf]
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
@@ -99,10 +102,18 @@ class Agent():
         self.d_optimizer.step()
 
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # Compute dloss
+        A2 = self.g_target(S2)
+        S3_ = self.d_target(S2, A2)
+        #Q = rewards + (γ * Q2 * (1 - dones))
+        S3_ *= (1 - dones)
+        
+        # Compute gloss
+        #S2_ = self.d(S, A)
         A_ = self.g(S)
-        Q_ = self.d(S, A_)
-        gloss = -Q_.mean()
+        S2_ = self.d(S, A_)
+        dist = torch.sum((S2_ - S3_)**2, dim=1)**.5 # [0, inf]
+        rewards_ = torch.exp(-dist) # [0, 1]
+        gloss = (torch.log((rewards_ - rewards)**2)/2).mean() # [0, inf]
         
         # Minimize the loss
         self.g_optimizer.zero_grad()
