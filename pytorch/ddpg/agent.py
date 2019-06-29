@@ -60,12 +60,12 @@ class Agent():
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample() # E: expriences
-            dloss, gloss = self.learn(E, GAMMA)
+            gloss, dloss = self.learn(E, GAMMA)
             #print(dloss, gloss)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
             #print(dloss, gloss)
-            return dloss, gloss
+            return gloss, dloss
         else: return 0, 0
         
     def learn(self, E, γ): # γ: gamma
@@ -88,11 +88,15 @@ class Agent():
         A2 = self.g_target(S2)
         Q2 = self.d_target(S2, A2)
         Q = rewards + (γ * Q2 * (1 - dones))
+        #S3_ *= (1 - dones)
         
         # Compute dloss
-        dQ = self.d(S, A)
-        dloss = ((dQ - Q)**2).mean()
+        Q_ = self.d(S, A)
+        #rewards_ = torch.sum((S2_ - S3_)**2, dim=1)**0.5
+        #dloss = ((rewards_ - rewards)**2).mean()
+        dloss = ((Q_ - Q)**2).mean()
         #dloss = F.mse_loss(dQ, Q)
+        #dloss += torch.sum((S2_ - S2)**2, dim=1).mean()
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
@@ -101,10 +105,19 @@ class Agent():
         self.d_optimizer.step()
 
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # Compute gloss
-        gA = self.g(S)
-        gQ = self.d(S, gA)
-        gloss = -gQ.mean()
+#         # Compute gloss
+#         A2 = self.g_target(S2)
+#         Q2 = self.d_target(S2, A2)
+#         Q = rewards + (γ * Q2 * (1 - dones))
+#         #S3_ *= (1 - dones)
+        
+        # Compute dloss
+        #S2_ = self.d(S, A)
+        A_ = self.g(S)
+        Q_ = self.d(S, A_)
+        #rewards_ = torch.sum((S2_ - S3_)**2, dim=1)
+        #gloss = -rewards_.mean()
+        gloss = -Q_.mean()
         
         # Minimize the loss
         self.g_optimizer.zero_grad()
@@ -115,7 +128,7 @@ class Agent():
         self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
         
-        return dloss, gloss
+        return gloss, dloss
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
