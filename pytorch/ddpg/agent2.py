@@ -1,5 +1,5 @@
 from memory import Memory
-from model import G, D
+from model2 import G, D
 import random
 
 import torch

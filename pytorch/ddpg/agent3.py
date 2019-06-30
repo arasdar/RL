@@ -1,5 +1,5 @@
 from memory import Memory
-from model import G, D
+from model2 import G, D
 import random
 
 import torch
@@ -94,12 +94,12 @@ class Agent():
         # Compute dloss
         S2_ = self.d(S, A)
         #dist = torch.sum((S2_ - S3_)**2, dim=1)**.5 # [0, inf]
-        dist = torch.sum((S2_ - S2)**2, dim=1)**.5 # [0, inf]
+        #dist = torch.sum((S2_ - S2)**2, dim=1)**.5 # [0, inf]
         dist2 = torch.sum((S2 - S3_)**2, dim=1)**.5 # [0, inf]
         #dist_rewards = torch.sum((S2 - S3)**2, dim=1)**.5 # [0, inf]
         rewards_ = torch.exp(-dist2) # [0, 1]
         dloss = -(torch.log((rewards_ - rewards)**2)/2).mean() # [0, inf]
-        dloss += dist 
+        #dloss += dist.mean()
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
