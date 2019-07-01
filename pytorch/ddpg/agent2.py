@@ -83,17 +83,30 @@ class Agent():
         """
         S, A, rewards, S2, dones = E
 
-        # ---------------------------- update D: Discriminator (exacminer/evaluator) & Decoder (predictor) --------------- #
-        A2 = self.g_target(S2)
-        S3_ = self.d_target(S2, A2)
+        # ---------------------------- update D: Critic --------------- #
+#         A2 = self.g_target(S2)
+#         S3_ = self.d_target(S2, A2)
         #Q = rewards + (γ * Q2 * (1 - dones))
+        A2 = self.g(S2)
+        S3_ = self.d(S2, A2)
         S3_ *= (1 - dones)
+
+        # dloss
+#         S2_ = self.d(S, A)
         
-        # Compute dloss
-        S2_ = self.d(S, A)
-        dist = torch.sum((S2_ - S3_)**2, dim=1)**.5 # [0, inf]
+        #dist = torch.sum((S2 - S2_)**2, dim=1)**.5 # [0, inf]
+        dist = torch.sum((S2 - S3_)**2, dim=1)**.5 # [0, inf]
         rewards_ = torch.exp(-dist) # [0, 1]
-        dloss = -(torch.log((rewards_ - rewards)**2)/2).mean() # [0, inf]
+        #print(rewards_.shape, rewards.shape)
+        rewards = rewards.reshape(-1)
+        #print(rewards_.shape, rewards.shape)
+        #neglog = -(torch.log((rewards_ - rewards)**2)/2)
+        #print(rewards_.shape, rewards.shape, neglog.shape)
+        dloss = torch.abs(((rewards_ - rewards))).mean() # [0, inf]
+        #dloss = (((rewards_ - rewards))).mean() # [0, inf]
+        #dloss = (torch.log((rewards_ - rewards)**2)/2).mean() # [0, inf]
+        #print(dist.shape, neglog.shape)
+        #dloss += dist.mean()
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
@@ -101,19 +114,31 @@ class Agent():
         #torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
         self.d_optimizer.step()
 
-        # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        A2 = self.g_target(S2)
-        S3_ = self.d_target(S2, A2)
+        # ---------------------------- update G: Actor ---------------------------- #
+#         A2 = self.g_target(S2)
+#         S3_ = self.d_target(S2, A2)
         #Q = rewards + (γ * Q2 * (1 - dones))
+        A2 = self.g(S2)
+        S3_ = self.d(S2, A2)
         S3_ *= (1 - dones)
+
+        # dloss
+#         S2_ = self.d(S, A)
         
-        # Compute gloss
-        #S2_ = self.d(S, A)
-        A_ = self.g(S)
-        S2_ = self.d(S, A_)
-        dist = torch.sum((S2_ - S3_)**2, dim=1)**.5 # [0, inf]
+        #dist = torch.sum((S2 - S2_)**2, dim=1)**.5 # [0, inf]
+        dist = torch.sum((S2 - S3_)**2, dim=1)**.5 # [0, inf]
         rewards_ = torch.exp(-dist) # [0, 1]
-        gloss = (torch.log((rewards_ - rewards)**2)/2).mean() # [0, inf]
+        #print(rewards_.shape, rewards.shape)
+#         rewards = rewards.reshape(-1)
+        #print(rewards_.shape, rewards.shape)
+        #neglog = -(torch.log((rewards_ - rewards)**2)/2)
+        #print(rewards_.shape, rewards.shape, neglog.shape)
+#         gloss = (torch.log((rewards_))).mean() # [0, inf]
+        gloss = -(((rewards_))).mean() # [0, inf]
+        #dloss = (((rewards_ - rewards))).mean() # [0, inf]
+        #dloss = -(torch.log((rewards_ - rewards)**2)/2).mean() # [0, inf]
+        #print(dist.shape, neglog.shape)
+        #dloss += dist.mean()
         
         # Minimize the loss
         self.g_optimizer.zero_grad()
