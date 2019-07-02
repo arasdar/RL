@@ -101,9 +101,9 @@ class Agent():
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
         A2 = self.g(S2)
         Q2 = self.d(S2, A2)
-        Q = rewards + (γ * Q2 * (1 - dones))
+        #Q = rewards + (γ * Q2 * (1 - dones))
         
-        gloss = -Q.mean()
+        gloss = -Q2.mean()
         
         # Minimize the loss
         self.g_optimizer.zero_grad()
