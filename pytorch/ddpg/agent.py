@@ -88,9 +88,9 @@ class Agent():
         Q2 = self.d_target(S2, A2)
         Q = rewards + (γ * Q2 * (1 - dones))
         
-        # Compute dloss
         Q_ = self.d(S, A)
-        dloss = torch.sum((Q_ - Q)**2, dim=1).mean()
+        #dloss = torch.sum((Q_ - Q)**2, dim=1).mean()
+        dloss = torch.sum(torch.abs(Q_ - Q), dim=1).mean()
         
         # Minimize the loss
         self.d_optimizer.zero_grad()
@@ -99,10 +99,11 @@ class Agent():
         self.d_optimizer.step()
 
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
-        # Compute dloss
-        A_ = self.g(S)
-        Q_ = self.d(S, A_)
-        gloss = -Q_.mean()
+        A2 = self.g(S2)
+        Q2 = self.d(S2, A2)
+        Q = rewards + (γ * Q2 * (1 - dones))
+        
+        gloss = -Q.mean()
         
         # Minimize the loss
         self.g_optimizer.zero_grad()
