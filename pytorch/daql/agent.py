@@ -46,13 +46,7 @@ class Agent():
         # ReplayBuffer/ Memory
         self.memory = Memory(a_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
     
-#     #def step(self, state, action, reward, next_state, done/terminal):
-#     def step(self, s, a, r, s2, done):
-#         """Save experience (e) in replay memory, and use random sample from buffer to learn."""
-#         # Save experience (e) / reward (r)
-#         self.memory.add(s, a, r, s2, done)
-
-    # D: Discriminator/classifier as the actor
+    # D: Discriminator/classifier as the actor such as DQN
     def act(self, s):
         """Returns an action (a) (as per current policy) for a given state (s)."""
         s = torch.from_numpy(s).float().to(device)
@@ -62,16 +56,27 @@ class Agent():
         self.d.train() # train
         return a # tanh(a):[-1, 1]
 
+    # # Q_fixed: Qfunction/ Q-Net
+    # def Qvalue(self, s):
+    #     """Returns value (q) given state (s)."""
+    #     s = torch.from_numpy(s).float().to(device)
+    #     q = self.q_fixed(s).cpu().data.numpy()
+    #     return q
+    
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
             E = self.memory.sample() # E: expriences
-            gloss, dloss = self.learn(E, GAMMA)
+            gloss, dloss, rewards, rewards_in = self.learn(E, GAMMA)
             #print(dloss, gloss)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
+            rewards = rewards.cpu().data.numpy()
+            rewards_in = rewards_in.cpu().data.numpy()
+            #print(rewards_in.shape, rewards.shape)
             #print(dloss, gloss)
-            return gloss, dloss
-        else: return 0, 0
+            return gloss, dloss, rewards, rewards_in
+        
+        else: return 0, 0, 0, 0
         
     def learn(self, E, γ): # γ: gamma, E: expriences
         """Update G and D parameters using given batch of experience (e) tuples.
@@ -89,13 +94,20 @@ class Agent():
         S, A, rewards, S2, dones = E
 
         # ---------------------------- update G: Generator or Adversarial/Autoencoder (predictor) --------------- #
+        Q = self.q_fixed(S)
+        Q2 = self.q_fixed(S2)
+        rewards_in = Q - (γ * Q2)
+        #print(rewards_in.shape, rewards.shape, Q.shape, Q2.shape)
+        
         A2 = self.d_target(S2)
         S3 = self.g_target(S2, A2)
         Q2 = self.q_fixed(S3)
-        Q = rewards + (γ * Q2 * (1 - dones))
+        Q = rewards + rewards_in + (γ * Q2 * (1 - dones))
+        #print(Q.shape, Q2.shape)
         
         S2_ = self.g(S, A)
         Q_ = self.q_fixed(S2_)
+        #print(Q_.shape)
         
         #gloss = torch.sum((Q_ - Q)**2, dim=1).mean()
         gloss = torch.sum(torch.abs(Q_ - Q)).mean()
@@ -122,7 +134,7 @@ class Agent():
         self.soft_update(self.d, self.d_target, γ)
         self.soft_update(self.g, self.g_target, γ)
         
-        return gloss, dloss
+        return gloss, dloss, rewards.mean(), rewards_in.mean()
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
