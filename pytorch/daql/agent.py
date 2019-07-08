@@ -1,5 +1,5 @@
 from memory import Memory # episodic memory/ hippocampus
-from model import D, G, Q_fixed # Discriminator/Actor, Generator/Adv/Autoencoceder, Qnetwork/value network
+from model import D, G, Q_fixed # Discriminator/Actor, Generator/Adversarial/Autoencoceder, Q-Net/value/reward network
 
 import random
 
@@ -55,13 +55,6 @@ class Agent():
             a = self.d(s).cpu().data.numpy()
         self.d.train() # train
         return a # tanh(a):[-1, 1]
-
-    # # Q_fixed: Qfunction/ Q-Net
-    # def Qvalue(self, s):
-    #     """Returns value (q) given state (s)."""
-    #     s = torch.from_numpy(s).float().to(device)
-    #     q = self.q_fixed(s).cpu().data.numpy()
-    #     return q
     
     def start_learn(self):
         if len(self.memory) > BATCH_SIZE:
@@ -102,7 +95,7 @@ class Agent():
         A2 = self.d_target(S2)
         S3 = self.g_target(S2, A2)
         Q2 = self.q_fixed(S3)
-        Q = rewards + rewards_in + (γ * Q2 * (1 - dones))
+        Q = rewards + (γ * Q2 * (1 - dones))
         #print(Q.shape, Q2.shape)
         
         S2_ = self.g(S, A)
@@ -119,6 +112,12 @@ class Agent():
         self.g_optimizer.step()
 
         # ---------------------------- update G: Generator (action generator or actor) ---------------------------- #
+        # A = self.d(S)
+        # S2 = self.g(S, A)
+        # Q = self.q_fixed(S2)
+        
+        #dloss = -Q.mean()
+        # OR
         A2 = self.d(S2)
         S3 = self.g(S2, A2)
         Q2 = self.q_fixed(S3)

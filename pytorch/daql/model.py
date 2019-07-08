@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class D(nn.Module):
+class D(nn.Module): # Discriminator
     """Actor (policy) Model."""
 
     def __init__(self, s_size, a_size, random_seed, h_size=400):
@@ -38,8 +38,8 @@ class D(nn.Module):
 
         return torch.tanh(self.fc2(H)) # [-1, +1]
 
-class G(nn.Module):
-    """Generative Model."""
+class G(nn.Module): # Generator
+    """Generative Model or Autoencoder or Advencoder."""
 
     def __init__(self, s_size, a_size, random_seed, h_size=400):
         """Initialize parameters and build model.
@@ -81,7 +81,7 @@ class G(nn.Module):
         return self.fc3(H)
 
 class Q_fixed(nn.Module):
-    """Q-Network Model for Q-learning."""
+    """Q-Network Model for Q-learning or reward reward function."""
 
     def __init__(self, s_size, a_size, random_seed, h_size=400):
         """Initialize parameters and build model.
