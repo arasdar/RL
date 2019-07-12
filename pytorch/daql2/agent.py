@@ -17,7 +17,7 @@ class Agent():
     def __init__(self, s_size, a_size, h_size, random_seed, buffer_size, batch_size, gamma, lr_g, lr_d):
         """Initialize an Agent object.
         """
-        random.seed(random_seed)
+        #random.seed(random_seed)
         
         self.gamma = gamma
         self.batch_size = batch_size
