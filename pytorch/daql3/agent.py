@@ -3,8 +3,6 @@ from modelD import D # Discriminator/Actor
 from modelG import G #Generator/Adversarial encoder/Autoencoceder
 from modelQ import Q_fixed #Q-Net/value/reward network
 
-import random
-
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -28,10 +26,6 @@ class Agent():
             a_size (int): dimension of each action (a)
             random_seed (int): random seed
         """
-        self.s_size = s_size
-        self.a_size = a_size
-        #self.seed = random.seed(random_seed)
-        
         # D: Discriminator/Actor Network (with Target Network)
         self.d = D(s_size, a_size, random_seed).to(device)
         self.d_target = D(s_size, a_size, random_seed).to(device)
@@ -72,7 +66,6 @@ class Agent():
             #print(rewards_in.shape, rewards.shape)
             #print(dloss, gloss)
             return gloss, dloss, rewards, rewards_in
-        
         else: return 0, 0, 0, 0
         
     def learn(self, E, γ): # γ: gamma, E: expriences
