@@ -16,8 +16,11 @@ class Memory:
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
         """
+        random.seed(random_seed)
+        
         self.buffer = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size
+        
         #("e: exprience", field_names=["s: state", "a: action", "r: reward", "s2: next_state", "done/teminal"])
         self.e = namedtuple("e", field_names=["s", "a", "r", "s2", "done"])
     
