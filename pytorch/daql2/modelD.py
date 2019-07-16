@@ -4,10 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class D(nn.Module):
-    """Discriminator/Actor (policy) Model."""
+class D(nn.Module): # Discriminator
+    """Actor (policy) Model."""
 
-    def __init__(self, s_size, a_size, random_seed, h_size):
+    def __init__(self, s_size, a_size, h_size, random_seed):
         """Initialize parameters and build model.
         Params
         ======
@@ -18,7 +18,7 @@ class D(nn.Module):
         """
         super(D, self).__init__()
         
-        torch.manual_seed(random_seed) # reproducibility
+        torch.manual_seed(random_seed)
         
         self.fc1 = nn.Linear(s_size, h_size)
         

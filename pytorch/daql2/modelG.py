@@ -5,16 +5,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class G(nn.Module): # Generator
-    """Generative Model or Autoencoder or adversarial encoder."""
+    """Generative Model or Autoencoder or Adversarial encoder."""
 
-    def __init__(self, s_size, a_size, random_seed, h_size):
+    def __init__(self, s_size, a_size, h_size, random_seed):
         """Initialize parameters and build model.
         Params
         ======
             s_size (int): Dimension of each state (s)
             a_size (int): Dimension of each action (a)
-            random_seed (int): Random seed
             h_size (int): Number of nodes in hidden layer
+            random_seed (int): Random seed
         """
         super(G, self).__init__()
         
@@ -36,7 +36,7 @@ class G(nn.Module): # Generator
         self.fc3.weight.data.uniform_(-3e-3, 3e-3) # normal (0, 1)
         
     def forward(self, S, A):
-        """Build a Generator network that maps (states, actions) pairs -> predicted next states."""
+        """Build a Generator network that maps (states, actions) pairs -> next/pred states."""
         H = F.leaky_relu(self.bn1(self.fc1(S)))
         
         HA = torch.cat((H, A), dim=1)

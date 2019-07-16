@@ -1,63 +1,75 @@
 from memory import Memory # episodic memory/ hippocampus
 from modelD import D # Discriminator/Actor
-from modelG import G # Generator/Adversarial/Autoencoceder
-from modelQ import Q_fixed # Q-Net/value/reward network
-
-import random
+from modelG import G #Generator/Adversarial encoder/Autoencoceder
+from modelQ import Q_fixed #Q-Net/value/reward network
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# GAMMA = 0.99            # discount factor
+# LR = 1e-3        # learning rate of the critic
+# BATCH_SIZE = 1024         # minibatch size/ RAM size
+# BUFFER_SIZE = int(1e6)  # replay buffer size
 
-class Agent():
-    """an agent from the agency of DAQL."""
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+class Agent:
+    """From the agency of DAQL, interacts (interfaces) with the environment (env)."""
     
-    def __init__(self, s_size, a_size, h_size, random_seed, buffer_size, batch_size, gamma, lr_g, lr_d):
+    def __init__(self, s_size, a_size, h_size, random_seed, gamma, lr, batch_size, buffer_size, device):
         """Initialize an Agent object.
-        """
-        #random.seed(random_seed)
         
-        self.gamma = gamma
+        Params
+        ======
+            s_size (int): dimension of each state (s)
+            a_size (int): dimension of each action (a)
+            random_seed (int): random seed
+        """
         self.batch_size = batch_size
+        self.gamma = gamma
+        self.device = device
         
         # D: Discriminator/Actor Network (with Target Network)
         self.d = D(s_size, a_size, h_size, random_seed).to(device)
         self.d_target = D(s_size, a_size, h_size, random_seed).to(device)
-        self.d_optimizer = optim.Adam(self.d.parameters(), lr=lr_d)
+        self.d_optimizer = optim.Adam(self.d.parameters(), lr)
 
         # G: Generator/Adv-Autoencoder Network (with Target Network)
         self.g = G(s_size, a_size, h_size, random_seed).to(device)
         self.g_target = G(s_size, a_size, h_size, random_seed).to(device)
-        self.g_optimizer = optim.Adam(self.g.parameters(), lr=lr_g)
+        self.g_optimizer = optim.Adam(self.g.parameters(), lr)
         
         # Q: Q-Network (fixed/frozen)
         self.q_fixed = Q_fixed(s_size, random_seed).to(device)
         
         # ReplayBuffer/ Memory
-        self.memory = Memory(buffer_size, batch_size, random_seed)
+        self.memory = Memory(buffer_size, batch_size, random_seed, device)
     
     # D: Discriminator/classifier as the actor such as DQN
     def act(self, s):
         """Returns an action (a) (as per current policy) for a given state (s)."""
-        s = torch.from_numpy(s).float().to(device)
+        s = torch.from_numpy(s).float().to(self.device)
+        
         self.d.eval() # validation/test/inference
         with torch.no_grad():
             a = self.d(s).cpu().data.numpy()
+            
         self.d.train() # train
         return a # tanh(a):[-1, 1]
     
     def start_learn(self):
         if len(self.memory) >= self.batch_size:
             E = self.memory.sample() # E: expriences
-            gloss, dloss, reward, reward_in = self.learn(E, self.gamma)
+            gloss, dloss, rewards, rewards_in = self.learn(E, self.gamma)
             #print(dloss, gloss)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
-            reward = reward.cpu().data.numpy()
-            reward_in = reward_in.cpu().data.numpy()
-            return gloss, dloss, reward, reward_in
+            rewards = rewards.cpu().data.numpy()
+            rewards_in = rewards_in.cpu().data.numpy()
+            #print(rewards_in.shape, rewards.shape)
+            #print(dloss, gloss)
+            return gloss, dloss, rewards, rewards_in
         else: return 0, 0, 0, 0
         
     def learn(self, E, γ): # γ: gamma, E: expriences
@@ -126,7 +138,7 @@ class Agent():
 
     def soft_update(self, local_model, target_model, γ):
         """Soft update model parameters.
-        γ: GAMMA
+        γ: GAMMA ~ 0.9999
         θ_target = (1-γ)*θ_local + γ*θ_target
 
         Params

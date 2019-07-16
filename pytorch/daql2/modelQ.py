@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class Q_fixed(nn.Module):
-    """Q-Network for Q-learning or reward function/system."""
+    """Q-Network Model for Q-learning or reward reward function."""
 
     def __init__(self, s_size, random_seed):
         """Initialize parameters and build model.
