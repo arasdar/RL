@@ -1,23 +1,23 @@
 from memory import Memory # episodic memory/ hippocampus
-from model import D, G, Q_fixed # Discriminator/Actor, Generator/Adversarial/Autoencoceder, Q-Net/value/reward network
-
-import random
+from modelD import D # Discriminator/Actor
+from modelG import G #Generator/Adversarial encoder/Autoencoceder
+from modelQ import Q_fixed #Q-Net/value/reward network
 
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-GAMMA = 0.99            # discount factor
-LR = 1e-3        # learning rate of the critic
-BATCH_SIZE = 1024         # minibatch size/ RAM size
-BUFFER_SIZE = int(1e6)  # replay buffer size
+# GAMMA = 0.99            # discount factor
+# LR = 1e-3        # learning rate of the critic
+# BATCH_SIZE = 1024         # minibatch size/ RAM size
+# BUFFER_SIZE = int(1e6)  # replay buffer size
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-class Agent():
-    """Interacts with and learns from the environment (env)."""
+class Agent:
+    """From the agency of DAQL, interacts (interfaces) with the environment (env)."""
     
-    def __init__(self, s_size, a_size, random_seed):
+    def __init__(self, s_size, a_size, h_size, random_seed, gamma, lr, batch_size, buffer_size, device):
         """Initialize an Agent object.
         
         Params
@@ -26,40 +26,42 @@ class Agent():
             a_size (int): dimension of each action (a)
             random_seed (int): random seed
         """
-        self.s_size = s_size
-        self.a_size = a_size
-        self.seed = random.seed(random_seed)
+        self.batch_size = batch_size
+        self.gamma = gamma
+        self.device = device
         
         # D: Discriminator/Actor Network (with Target Network)
-        self.d = D(s_size, a_size, random_seed).to(device)
-        self.d_target = D(s_size, a_size, random_seed).to(device)
-        self.d_optimizer = optim.Adam(self.d.parameters(), lr=LR)
+        self.d = D(s_size, a_size, h_size, random_seed).to(device)
+        self.d_target = D(s_size, a_size, h_size, random_seed).to(device)
+        self.d_optimizer = optim.Adam(self.d.parameters(), lr)
 
         # G: Generator/Adv-Autoencoder Network (with Target Network)
-        self.g = G(s_size, a_size, random_seed).to(device)
-        self.g_target = G(s_size, a_size, random_seed).to(device)
-        self.g_optimizer = optim.Adam(self.g.parameters(), lr=LR)
+        self.g = G(s_size, a_size, h_size, random_seed).to(device)
+        self.g_target = G(s_size, a_size, h_size, random_seed).to(device)
+        self.g_optimizer = optim.Adam(self.g.parameters(), lr)
         
         # Q: Q-Network (fixed/frozen)
-        self.q_fixed = Q_fixed(s_size, a_size, random_seed).to(device)
+        self.q_fixed = Q_fixed(s_size, random_seed).to(device)
         
         # ReplayBuffer/ Memory
-        self.memory = Memory(a_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
+        self.memory = Memory(buffer_size, batch_size, random_seed, device)
     
     # D: Discriminator/classifier as the actor such as DQN
     def act(self, s):
         """Returns an action (a) (as per current policy) for a given state (s)."""
-        s = torch.from_numpy(s).float().to(device)
+        s = torch.from_numpy(s).float().to(self.device)
+        
         self.d.eval() # validation/test/inference
         with torch.no_grad():
             a = self.d(s).cpu().data.numpy()
+            
         self.d.train() # train
         return a # tanh(a):[-1, 1]
     
     def start_learn(self):
-        if len(self.memory) > BATCH_SIZE:
+        if len(self.memory) >= self.batch_size:
             E = self.memory.sample() # E: expriences
-            gloss, dloss, rewards, rewards_in = self.learn(E, GAMMA)
+            gloss, dloss, rewards, rewards_in = self.learn(E, self.gamma)
             #print(dloss, gloss)
             dloss = dloss.cpu().data.numpy()
             gloss = gloss.cpu().data.numpy()
@@ -68,7 +70,6 @@ class Agent():
             #print(rewards_in.shape, rewards.shape)
             #print(dloss, gloss)
             return gloss, dloss, rewards, rewards_in
-        
         else: return 0, 0, 0, 0
         
     def learn(self, E, γ): # γ: gamma, E: expriences
